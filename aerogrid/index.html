@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AEROGRID - 하늘을 설계하다</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <link rel="stylesheet" href="./font/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.2/packages/wanted-sans/documentation/webfonts/wanted-sans.css">
+</head>
+<body>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-background">
+      <img src="./img/hero_Image-1.jpg" alt="AEROGRID Hero Background 1" class="hero-bg-image active">
+      <img src="./img/hero_Image-2.jpg" alt="AEROGRID Hero Background 2" class="hero-bg-image">
+      <img src="./img/hero_Image-3.jpg" alt="AEROGRID Hero Background 3" class="hero-bg-image">
+      <img src="./img/hero_Image-4.jpg" alt="AEROGRID Hero Background 4" class="hero-bg-image">
+      <div class="hero-overlay"></div>
+    </div>
+    
+    <!-- Header Navigation -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <img src="./img/logo.svg" alt="AEROGRID Logo" class="logo-img">
+        </div>
+        <nav class="nav">
+          <a href="#" class="nav-link">회사소개</a>
+          <a href="#" class="nav-link">사업영역</a>
+          <a href="#" class="nav-link">미디어센터</a>
+          <a href="#" class="nav-link">채용</a>
+          <a href="#" class="nav-link">문의하기</a>
+          <div class="nav-divider"></div>
+          <div class="language-selector">
+            <span class="language-text">KR</span>
+            <img src="./img/arrow_down.svg" alt="Arrow Down" class="language-arrow">
+          </div>
+          <div class="menu-icon">
+            <img src="./img/menu.svg" alt="Menu" class="menu-img">
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Hero Content -->
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title"><span class="text-content" data-slide="0">하늘을 설계하다</span></h1>
+        <p class="hero-subtitle"><span class="text-content" data-slide="0">산업용 자율비행 드론부터 관제·AI 비전까지</span></p>
+      </div>
+    </div>
+
+    <!-- Hero Pagination -->
+    <div class="hero-pagination">
+      <div class="play-pause-btn">
+        <img src="./img/pause.svg" alt="Pause" class="pause-icon active">
+        <img src="./img/play.svg" alt="Play" class="play-icon">
+      </div>
+      <div class="pagination-dots">
+        <span class="dot active" data-slide="0">
+          <svg class="progress-ring" width="28" height="28">
+            <circle class="progress-ring-circle" cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.7"/>
+          </svg>
+        </span>
+        <span class="dot" data-slide="1">
+          <svg class="progress-ring" width="28" height="28">
+            <circle class="progress-ring-circle" cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.7"/>
+          </svg>
+        </span>
+        <span class="dot" data-slide="2">
+          <svg class="progress-ring" width="28" height="28">
+            <circle class="progress-ring-circle" cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.7"/>
+          </svg>
+        </span>
+        <span class="dot" data-slide="3">
+          <svg class="progress-ring" width="28" height="28">
+            <circle class="progress-ring-circle" cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.7"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SVG 마스크 정의 -->
+  <svg width="0" height="0" style="position: absolute;">
+    <defs>
+      <mask id="earth-mask">
+        <rect width="100%" height="100%" fill="black"/>
+        <rect id="earth-mask-rect" x="50%" y="50%" width="0%" height="0%" 
+              fill="white" rx="0px" ry="0px"
+              transform="translate(-50%, -50%)"/>
+      </mask>
+    </defs>
+  </svg>
+
+  <!-- Vision Section -->
+  <section class="vision-section"> <!-- LIFE SPACE 섹션 -->
+    <div class="vision-container"> <!-- sticky stage -->
+      <!-- 헤드라인 -->
+      <div class="vision-text">
+        <h2 class="vision-title">
+          <div class="headline-line">
+            <span class="text-line" data-text="WHAT WE">WHAT WE</span>
+          </div>
+          <div class="headline-line">
+            <span class="text-line" data-text="WANT TO DO">WANT TO DO</span>
+          </div>
+        </h2>
+      </div>
+
+      <!-- Earth 배경 레이어 (헤드라인과 카드 사이) -->
+      <div class="earth-background">
+        <img src="./img/earth.jpg" alt="earth image" class="earth-image">
+        <div class="earth-overlay"></div>
+        
+        <!-- Earth 위 텍스트 -->
+        <div class="earth-text">
+          <div class="earth-title-line">
+            <span class="earth-title" data-text="하늘의 데이터를 모두에게">하늘의 데이터를 모두에게</span>
+          </div>
+          <div class="earth-subtitle-line">
+            <span class="earth-subtitle" data-text="누구나 신뢰할 수 있는 드론 데이터와 개방형 플랫폼으로 의사결정을 바꿉니다.">누구나 신뢰할 수 있는 드론 데이터와 개방형 플랫폼으로 의사결정을 바꿉니다.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 카드 마스크 이미지 -->
+      <div class="vision-card">
+        <div class="card-mask">
+          <img src="./img/rolling-1.jpg" alt="rolling image" class="card-image active">
+          <img src="./img/rolling-2.jpg" alt="rolling image" class="card-image">
+          <img src="./img/rolling-3.jpg" alt="rolling image" class="card-image">
+          <img src="./img/rolling-4.jpg" alt="rolling image" class="card-image">
+          <img src="./img/rolling-5.jpg" alt="rolling image" class="card-image">
+        </div>
+        <div class="card-overlay"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Business Section -->
+  <section class="business-section">
+    <div class="business-container">
+      <!-- Business Areas 헤더 -->
+      <div class="business-header">
+        <h2 class="business-title">Business Areas. Business Areas. Business Areas. Business Areas. </h2>
+      </div>
+
+      <!-- 좌측 타이틀 -->
+      <div class="business-text">
+        <h3 class="business-subtitle">드론 · AI · 원격관제 클라우드를 통해 인프라의 생산성과 안전성을 동시에 높입니다.</h3>
+        <button class="business-more-btn">사업분야 더보기</button>
+      </div>
+
+      <!-- 비즈니스 카드들 -->
+      <div class="business-cards">
+        <div class="business-card" data-category="urban-planning">
+          <img src="./img/business_area-1.jpg" alt="도시 계획" class="business-card-image">
+          <div class="business-card-overlay">
+            <div class="business-card-text-group">
+              <h4 class="business-card-title">도시 계획</h4>
+              <p class="business-card-description">매핑, 모델링, 워크플로 자동화로 보다 효율적으로 설계하고 계획합니다.</p>
+            </div>
+            <div class="business-card-button-group">
+              <button class="business-card-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-card" data-category="public-safety">
+          <img src="./img/business_area-2.jpg" alt="공공 안전" class="business-card-image">
+          <div class="business-card-overlay">
+            <div class="business-card-text-group">
+              <h4 class="business-card-title">공공 안전</h4>
+              <p class="business-card-description">실시간 모니터링과 AI 분석으로 위험 상황을 사전에 감지하고 대응합니다.</p>
+            </div>
+            <div class="business-card-button-group">
+              <button class="business-card-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-card" data-category="aec-survey">
+          <img src="./img/business_area-3.jpg" alt="AEC 및 측량" class="business-card-image">
+          <div class="business-card-overlay">
+            <div class="business-card-text-group">
+              <h4 class="business-card-title">AEC 및 측량</h4>
+              <p class="business-card-description">정밀한 3D 모델링과 측량 데이터로 건설 프로젝트의 정확성을 높입니다.</p>
+            </div>
+            <div class="business-card-button-group">
+              <button class="business-card-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-card" data-category="environment">
+          <img src="./img/business_area-4.jpg" alt="환경·해양 보전" class="business-card-image">
+          <div class="business-card-overlay">
+            <div class="business-card-text-group">
+              <h4 class="business-card-title">환경·해양 보전</h4>
+              <p class="business-card-description">환경 변화를 모니터링하고 지속 가능한 보전 정책을 수립합니다.</p>
+            </div>
+            <div class="business-card-button-group">
+              <button class="business-card-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-card" data-category="agriculture">
+          <img src="./img/business_area-5.jpg" alt="농업·스마트팜" class="business-card-image">
+          <div class="business-card-overlay">
+            <div class="business-card-text-group">
+              <h4 class="business-card-title">농업·스마트팜</h4>
+              <p class="business-card-description">스마트 농업 기술로 작물 생산성과 품질을 향상시킵니다.</p>
+            </div>
+            <div class="business-card-button-group">
+              <button class="business-card-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Media & Career Section -->
+  <section class="media-career-section">
+    <div class="media-career-container">
+      <!-- 미디어 섹션 -->
+      <div class="media-section">
+        <div class="media-header">
+          <h2 class="media-title">미디어센터</h2>
+          <button class="media-more-btn">더 많은 소식 보기 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="media-scroll-container">
+          <div class="media-grid">
+            <div class="media-item">
+              <div class="media-image">
+                <img src="./img/media-1.jpg" alt="AEC 및 측량" class="media-img">
+                <div class="media-overlay">
+                  <span class="media-category">AEC 및 측량</span>
+                </div>
+              </div>
+              <div class="media-content">
+                <h3 class="media-item-title">드론과 AI를 활용해 지속 가능한 방식으로 삼림 효율성 증대</h3>
+                <span class="media-date">2025.04.01</span>
+              </div>
+            </div>
+
+            <div class="media-item">
+              <div class="media-image">
+                <img src="./img/media-2.jpg" alt="도시 계획" class="media-img">
+                <div class="media-overlay">
+                  <span class="media-category">도시 계획</span>
+                </div>
+              </div>
+              <div class="media-content">
+                <h3 class="media-item-title">송전선 500km를 밤새 훑다—AI 자율점검 드론 상시화</h3>
+                <span class="media-date">2025.04.01</span>
+              </div>
+            </div>
+
+            <div class="media-item">
+              <div class="media-image">
+                <img src="./img/media-3.jpg" alt="공공 안전" class="media-img">
+                <div class="media-overlay">
+                  <span class="media-category">공공 안전</span>
+                </div>
+              </div>
+              <div class="media-content">
+                <h3 class="media-item-title">산불 초기 10분, 열화상 드론이 화선을 멈췄다</h3>
+                <span class="media-date">2025.04.01</span>
+              </div>
+            </div>
+
+            <div class="media-item">
+              <div class="media-image">
+                <img src="./img/media-4.jpg" alt="도시 계획" class="media-img">
+                <div class="media-overlay">
+                  <span class="media-category">도시 계획</span>
+                </div>
+              </div>
+              <div class="media-content">
+                <h3 class="media-item-title">도심 30분 배송</h3>
+                <span class="media-date">2025.04.01</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 커리어 섹션 -->
+      <div class="career-section">
+        <div class="career-header">
+          <h2 class="career-title">에어로그리드와 함께 세상을 바꿀 인재를 기다립니다.</h2>
+          <button class="career-more-btn">더 많은 공고 보기 <span class="arrow">→</span></button>
+        </div>
+
+        <div class="career-grid">
+          <div class="career-item">
+            <div class="career-status">채용 중</div>
+            <h3 class="career-item-title">경력직 PM/PO 채용</h3>
+            <p class="career-period">2025.08.01 ~ 2025.08.15</p>
+          </div>
+
+          <div class="career-item">
+            <div class="career-status">채용 중</div>
+            <h3 class="career-item-title">2025년 R&D 인재 상시채용</h3>
+            <p class="career-period">2025.01.01 ~ 2025.12.31</p>
+          </div>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="pagination">
+          <button class="page-btn"><<</button>
+          <button class="page-btn"><</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">4</button>
+          <button class="page-btn">5</button>
+          <button class="page-btn">></button>
+          <button class="page-btn">>></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Custom Cursor -->
+  <div id="custom-cursor" aria-hidden="true"></div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

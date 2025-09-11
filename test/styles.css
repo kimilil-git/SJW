@@ -1,0 +1,832 @@
+/* AEROGRID Website Styles - Clean Version */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Wanted Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  line-height: 1.6;
+  color: #111;
+  overflow-x: hidden;
+}
+
+/* Header Styles */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 120px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.header.scrolled {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* GNB 하단 라인 */
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 30px; /* 60px → 30px로 절반으로 줄임 */
+  width: 100%;
+  height: 100%;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  height: 32px;
+  width: auto;
+  filter: brightness(0) invert(1); /* Make logo white */
+  transition: filter 0.3s ease;
+}
+
+.header.scrolled .logo-img {
+  filter: none; /* Remove white filter */
+  filter: brightness(0) saturate(100%) invert(8%) sepia(100%) saturate(7482%) hue-rotate(240deg) brightness(95%) contrast(118%); /* #0201AD color */
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+  flex-shrink: 0;
+  height: 120px;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 400;
+  transition: all 0.3s ease;
+}
+
+.header.scrolled .nav-link {
+  color: #191919;
+}
+
+.nav-link:hover {
+  opacity: 0.8;
+}
+
+/* Navigation Divider */
+.nav-divider {
+  width: 1px;
+  height: 120px;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: background-color 0.3s ease;
+  align-self: stretch;
+  position: relative;
+  margin: 0 28px;
+}
+
+/* 메뉴 항목들 중앙 정렬 */
+.nav-link,
+.language-selector,
+.menu-icon {
+  align-self: center;
+}
+
+.header.scrolled .nav-divider {
+  background-color: rgba(25, 25, 25, 0.1);
+}
+
+/* Language Selector */
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.language-selector:hover {
+  opacity: 0.8;
+}
+
+.language-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 400;
+  transition: color 0.3s ease;
+}
+
+.header.scrolled .language-text {
+  color: #191919;
+}
+
+.language-arrow {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+  transition: filter 0.3s ease;
+}
+
+.header.scrolled .language-arrow {
+  filter: brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%); /* #191919 color */
+}
+
+/* Menu Icon */
+.menu-icon {
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+  display: none; /* 기본적으로 숨김 */
+}
+
+.menu-icon:hover {
+  opacity: 0.8;
+}
+
+.menu-img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1); /* Make menu icon white */
+  transition: filter 0.3s ease;
+}
+
+/* 메뉴 아이콘 스크롤 시 색상 수정 */
+.header.scrolled .menu-img {
+  filter: brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%); /* #191919 color */
+}
+
+/* 메뉴 아이콘 색상 강제 적용 */
+.header.scrolled .menu-img path {
+  fill: #191919 !important;
+}
+
+/* Hero Section */
+.hero {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hero-bg-image.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  z-index: 1;
+}
+
+.hero-content {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  z-index: 3;
+}
+
+.hero-text {
+  width: 42%;
+  height: auto;
+  text-align: left;
+  margin-left: 8%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero-title {
+  font-family: 'Wanted Sans', 'Noto Sans KR', sans-serif;
+  font-size: 80px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+  margin-bottom: 24px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 줄바꿈된 텍스트의 각 줄에 개별 애니메이션 적용 */
+.hero-title .text-content {
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+.hero-title .text-content .title-line {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 0.1em;
+  position: relative;
+}
+
+.hero-title .text-content .title-line:last-child {
+  margin-bottom: 0;
+}
+
+.hero-title .text-content .title-line .line-text {
+  display: block;
+  transform: translateY(100px); /* 초기 상태: 마스크 영역 외각(아래)에 위치 */
+  opacity: 1; /* 초기 상태: 불투명하게 유지 */
+  transition: all 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+/* 기본 텍스트 상태 (줄바꿈이 없는 경우) */
+.hero-title .text-content {
+  display: block;
+  transform: translateY(0); /* 초기 상태: 원래 위치에서 시작 */
+  opacity: 1; /* 초기 상태: 보이게 시작 */
+  transition: all 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+/* 기본 텍스트 상태 (줄바꿈이 없는 경우) */
+.hero-title .text-content {
+  display: block;
+  transform: translateY(0); /* 초기 상태: 원래 위치에서 시작 */
+  opacity: 1; /* 초기 상태: 보이게 시작 */
+  transition: all 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+/* 중복된 규칙 제거 */
+
+.hero-title.animate .text-content .title-line .line-text {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 각 줄별로 시간차를 두어 애니메이션 적용 */
+.hero-title.animate .text-content .title-line[data-line="1"] .line-text {
+  transition-delay: 0s; /* 첫 번째 줄과 동일한 시간에 등장 */
+}
+
+.hero-title.animate .text-content .title-line[data-line="2"] .line-text {
+  transition-delay: 0s; /* 두 번째 줄도 첫 번째 줄과 동일한 시간에 등장 */
+}
+
+.hero-title.exit .text-content .title-line .line-text {
+  transform: translateY(100px); /* 60px → 100px로 증가하여 완전히 사라지도록 */
+  opacity: 1;
+}
+
+.hero-title.enter .text-content .title-line .line-text {
+  transform: translateY(100px); /* 60px → 100px로 증가하여 완전히 사라진 상태에서 시작 */
+  opacity: 0;
+}
+
+.hero-subtitle {
+  font-family: 'Wanted Sans', 'Noto Sans KR', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: white;
+  opacity: 0.9;
+  line-height: 1.5;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-subtitle .text-content {
+  display: block;
+  transform: translateY(80px); /* 초기 상태: 마스크 영역 외각(아래)에 위치 */
+  opacity: 1; /* 초기 상태: 불투명하게 유지 */
+  transition: all 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transition-delay: 0.1s;
+  overflow: hidden;
+}
+
+.hero-subtitle.animate .text-content {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.hero-subtitle.exit .text-content {
+  transform: translateY(80px); /* 40px → 80px로 증가하여 완전히 사라지도록 */
+  opacity: 1;
+}
+
+.hero-subtitle.enter .text-content {
+  transform: translateY(80px); /* 40px → 80px로 증가하여 완전히 사라진 상태에서 시작 */
+  opacity: 0;
+}
+
+
+
+
+
+.hero-pagination {
+  position: absolute;
+  bottom: 80px; /* 40px → 100px로 60px 위로 올림 */
+  left: 8%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.play-pause-btn {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.play-icon,
+.pause-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.play-icon.active,
+.pause-icon.active {
+  opacity: 1;
+}
+
+.pagination-dots {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  margin: 0;
+  padding: 0;
+  /* 중앙 정렬을 위한 flexbox 설정 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 터치 영역 확장을 위한 가상 요소 */
+  position: relative;
+}
+
+.dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.dot:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.2);
+}
+
+.dot.active {
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1);
+  margin: 0;
+}
+
+.progress-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  width: 28px;
+  height: 28px;
+  /* 중앙정렬 보장 */
+  display: block;
+}
+
+.progress-ring-circle {
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.1s linear;
+  stroke-width: 1.7;
+}
+
+.dot:not(.active) .progress-ring {
+  opacity: 0;
+}
+
+/* 프로그래스 링 확장에 따른 dot 위치 조정 */
+
+/* 프로그래스 링 외곽(28px)을 기준으로 정렬 */
+/* 기본 dot: 8px, 활성 dot: 4px, 프로그래스 링: 28px */
+/* 정확한 간격 계산:
+   - 활성 dot: 프로그래스 링 중앙에 위치
+   - 모든 dot 간격을 16px로 균등하게 유지 */
+.dot.active {
+  /* 프로그래스 링(28px)과 활성 dot(4px)의 중앙 정렬 */
+  /* 좌측 간격을 줄이기 위해 8px만 이동 */
+  transform: translateX(8px);
+}
+
+.dot.active ~ .dot {
+  /* 활성 dot 뒤의 모든 dot을 8px + 8px = 16px 이동 */
+  /* 8px(활성 dot 이동) + 8px(추가 간격) = 16px */
+  transform: translateX(16px);
+}
+
+.dot:not(.active) {
+  transform: translateX(0); /* 기본 위치 */
+}
+
+/* Responsive Design */
+@media (min-width: 769px) {
+  .menu-icon {
+    display: block;
+  }
+}
+
+@media (max-width: 1200px) {
+  .hero-title {
+    font-size: 70px;
+  }
+  
+  .hero-subtitle {
+    font-size: 22px;
+  }
+  
+  .hero-text {
+    width: 45%;
+    margin-left: 6%;
+  }
+  
+  /* GNB 반응형 */
+  .header-content {
+    padding: 0 20px; /* 40px → 20px로 절반으로 줄임 */
+  }
+  
+  .nav {
+    gap: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 56px;
+  }
+  
+  .hero-subtitle {
+    font-size: 20px;
+  }
+  
+  .hero-text {
+    width: 80%;
+    height: auto;
+    margin-left: 10%;
+    text-align: center;
+  }
+  
+  .hero-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 40px;
+    height: calc(100vh - 120px);
+    margin-top: 0;
+  }
+  
+  /* GNB 반응형 */
+  .header-content {
+    padding: 0 10px; /* 20px → 10px로 절반으로 줄임 */
+  }
+  
+  .nav {
+    gap: 0;
+  }
+  
+  .nav-link,
+  .nav-divider,
+  .language-selector {
+    display: none;
+  }
+  
+  .menu-icon {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 44px;
+  }
+  
+  .hero-subtitle {
+    font-size: 18px;
+  }
+  
+  .hero-text {
+    width: 90%;
+    margin-left: 5%;
+    text-align: center;
+  }
+  
+  .hero-content {
+    height: calc(100vh - 120px);
+    margin-top: 0;
+    padding: 0 16px;
+  }
+  
+  /* GNB 반응형 */
+  .header-content {
+    padding: 0 8px; /* 16px → 8px로 절반으로 줄임 */
+  }
+  
+  .nav {
+    gap: 0;
+  }
+  
+  .nav-link,
+  .nav-divider,
+  .language-selector {
+    display: none;
+  }
+  
+  .menu-icon {
+    display: block;
+  }
+}
+
+/* ========== What we want to do 섹션 ========== */
+.vision-section {
+  /* 섹션 길이를 4~5장 정도로 제한(필요시 조절) */
+  --pages: 4.5;
+  min-height: calc(var(--pages) * 100svh);
+  position: relative;
+  padding-top: 0;
+  overflow: visible; /* sticky 조상은 visible 권장 */
+  background: #fff;
+}
+
+/* 뷰포트 한 장을 '무대'로 고정(pin) */
+.vision-container {
+  position: sticky;
+  top: 0;
+  height: 100svh; /* 주소창 변동 고려: dvh/svh 사용 */
+  width: 100%;
+}
+
+/* 헤드라인: 무대(stage) 안에서만 배치, 기본은 화면 정중앙 */
+.vision-text {
+  text-align: center;
+  margin-bottom: 0;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 100%;
+}
+
+/* 헤드라인(바닥: 연한 그레이) */
+.vision-title {
+  font-family: 'Fahkwang', serif;
+  font-size: clamp(48px, 8vw, 128px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #d3d3d3;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* 각 줄을 2-레이어로: 위층이 채워지는 색 */
+.text-line {
+  position: relative;
+  display: block;
+}
+
+.text-line::after {
+  content: attr(data-text);
+  position: absolute; inset: 0;
+  color: transparent;
+  background: linear-gradient(#000, #000) no-repeat;
+  -webkit-background-clip: text; background-clip: text;
+  background-size: 0% 100%;  /* 기본값: 0% */
+  transition: background-size 0s;      /* 스크럽은 JS로 제어 */
+}
+
+/* 텍스트 채우기 클래스 (0% → 100%) */
+.text-line.fill-0::after { background-size: 0% 100%; }
+.text-line.fill-10::after { background-size: 10% 100%; }
+.text-line.fill-20::after { background-size: 20% 100%; }
+.text-line.fill-30::after { background-size: 30% 100%; }
+.text-line.fill-40::after { background-size: 40% 100%; }
+.text-line.fill-50::after { background-size: 50% 100%; }
+.text-line.fill-60::after { background-size: 60% 100%; }
+.text-line.fill-70::after { background-size: 70% 100%; }
+.text-line.fill-80::after { background-size: 80% 100%; }
+.text-line.fill-90::after { background-size: 90% 100%; }
+.text-line.fill-100::after { background-size: 100% 100%; }
+
+.text-line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 등장 트랜지션(선택 사항) */
+.text-line[data-appear="true"] {
+  opacity: 1; transform: none;
+  transition: opacity .6s ease, transform .6s ease;
+}
+
+/* ========== 롤링 카드 ========== */
+.vision-card {
+  position: absolute;
+  width: 480px; 
+  height: 640px;
+  background: #fff; 
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  overflow: hidden;
+  left: 50%;
+  transform: translate(-50%, 100svh); /* 화면 아래에서 시작 */
+  pointer-events: auto; 
+  z-index: 15;
+  will-change: transform, width, height, border-radius;
+}
+
+.card-mask {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px; /* radius: 16 */
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  transition: all 0.5s ease;
+  /* 마스크의 정중앙 앵커포인트 설정 */
+  transform-origin: center center;
+}
+
+.card-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: all 0.5s ease;
+}
+
+.card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.card-image.active {
+  opacity: 1;
+}
+
+/* Earth 이미지 */
+.earth-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.earth-image.active {
+  opacity: 1;
+}
+
+/* 카드 확대 상태 */
+.vision-card.expanded {
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  transform: none;
+  border-radius: 0;
+  /* 확장 완료 시 margin 제거하여 전체 화면 덮기 */
+  margin: 0;
+}
+
+.vision-card.expanded .card-mask {
+  border-radius: 0;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .vision-title {
+    font-size: 4rem;
+  }
+  
+  .vision-card {
+    width: 360px; /* 480px의 75% */
+    height: 480px; /* 640px의 75% */
+  }
+}
+
+@media (max-width: 480px) {
+  .vision-title {
+    font-size: 3rem;
+  }
+  
+  .vision-card {
+    width: 300px; /* 480px의 62.5% */
+    height: 400px; /* 640px의 62.5% */
+  }
+}
