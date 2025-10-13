@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEROGRID CMS 관리자</title>
+    <link rel="stylesheet" href="admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.2/packages/wanted-sans/documentation/webfonts/wanted-sans.css">
+  <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 로그인 모달 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>관리자 로그인</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="password">비밀번호</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 메인 관리자 인터페이스 -->
+    <div id="adminInterface" class="admin-interface" style="display: none;">
+        <!-- 헤더 -->
+        <header class="admin-header">
+            <div class="admin-header-content">
+                <div class="admin-header-left">
+                    <a href="../index.html" class="btn btn-outline home-btn">← 홈으로</a>
+                    <h1>AEROGRID CMS</h1>
+                </div>
+                <div class="admin-actions">
+                    <div class="admin-status">
+                        <span id="currentTime" class="status-text"></span>
+                        <span id="lastSaved" class="status-text"></span>
+                    </div>
+                    <button id="previewBtn" class="btn btn-secondary">미리보기</button>
+                    <button id="saveBtn" class="btn btn-primary">저장</button>
+                    <button id="logoutBtn" class="btn btn-outline">로그아웃</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 네비게이션 -->
+        <nav class="admin-nav">
+            <button class="nav-tab active" data-tab="hero">히어로</button>
+            <button class="nav-tab" data-tab="vision">비전</button>
+            <button class="nav-tab" data-tab="business">비즈니스</button>
+            <button class="nav-tab" data-tab="media">미디어</button>
+            <button class="nav-tab" data-tab="career">채용</button>
+            <button class="nav-tab" data-tab="footer">푸터</button>
+            <button class="nav-tab" data-tab="seo">SEO</button>
+        </nav>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="admin-main">
+            <!-- 히어로 섹션 -->
+            <section id="hero-tab" class="tab-content active">
+                <div class="section-header">
+                    <h2>히어로 섹션 관리</h2>
+                    <p>메인 페이지의 히어로 슬라이드를 세트별로 관리합니다. (최대 5세트)</p>
+                </div>
+                
+                <div class="form-section">
+                    <h3>히어로 슬라이드 관리</h3>
+                    <div id="heroSlidesList" class="slides-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button id="addHeroSlide" class="btn btn-outline">슬라이드 추가</button>
+                </div>
+            </section>
+
+            <!-- 비전 섹션 -->
+            <section id="vision-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>비전 섹션 관리</h2>
+                    <p>비전 섹션의 롤링 이미지와 Earth 배경을 관리합니다.</p>
+                </div>
+                
+                <div class="form-section">
+                    <h3>텍스트 설정</h3>
+                    <div class="form-group">
+                        <label for="visionTitle">타이틀</label>
+                        <input type="text" id="visionTitle" placeholder="하늘의 데이터를 모두에게">
+                    </div>
+                    <div class="form-group">
+                        <label for="visionSubtitle">서브타이틀</label>
+                        <textarea id="visionSubtitle" rows="3" placeholder="누구나 신뢰할 수 있는 드론 데이터와 개방형 플랫폼으로 의사결정을 바꿉니다."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>롤링 이미지 관리 (최대 5장)</h3>
+                    <div id="visionRollingItemsList" class="items-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button id="addVisionRollingItem" class="btn btn-outline">이미지 추가</button>
+                </div>
+
+                <div class="form-section">
+                    <h3>Earth 배경 이미지</h3>
+                <div class="image-upload-zone" data-dropzone="vision-earth">
+                    <div class="upload-placeholder">
+                        <p>여기에 파일을 드래그하거나 클릭하여 업로드</p>
+                        <p class="file-info">지원 형식: JPG, PNG, GIF, WebP | 최대 10MB</p>
+                        <input type="file" id="visionEarthUpload" accept="image/*" class="file-input-hidden">
+                    </div>
+                </div>
+                    <div id="visionEarthPreview" class="image-preview"></div>
+                </div>
+            </section>
+
+            <!-- 비즈니스 섹션 -->
+            <section id="business-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>비즈니스 섹션 관리</h2>
+                    <p>비즈니스 카드와 서브타이틀을 관리합니다.</p>
+                </div>
+                
+                <div class="form-section">
+                    <h3>섹션 설정</h3>
+                    <div class="form-group">
+                        <label for="businessSubtitle">서브타이틀 (HTML 허용)</label>
+                        <textarea id="businessSubtitle" rows="3" placeholder="드론 · AI · 원격관제 클라우드를 통해<br>인프라의 생산성과 안전성을 동시에 높입니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessMoreButton">버튼 텍스트</label>
+                        <input type="text" id="businessMoreButton" placeholder="사업분야 더보기">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>비즈니스 카드 관리</h3>
+                    <div id="businessCardsList" class="cards-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button id="addBusinessCard" class="btn btn-outline">카드 추가</button>
+                </div>
+            </section>
+
+            <!-- 미디어 섹션 -->
+            <section id="media-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>미디어 섹션 관리</h2>
+                    <p>미디어 갤러리와 소개 텍스트를 관리합니다.</p>
+                    <div class="section-toggle">
+                        <label>
+                            <input type="checkbox" id="mediaSectionActive" checked>
+                            섹션 활성화
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>섹션 소개</h3>
+                    <div class="form-group">
+                        <label for="mediaIntro">소개 텍스트 (HTML 허용)</label>
+                        <div class="rich-editor" id="mediaIntro" contenteditable="true">
+                            <p>에어로그리드의 최신 소식과 성공 사례를 확인하세요.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>미디어 아이템 관리</h3>
+                    <div id="mediaItemsList" class="accordion-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button id="addMediaItem" class="btn btn-outline">아이템 추가</button>
+                </div>
+            </section>
+
+            <!-- 채용 섹션 -->
+            <section id="career-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>채용 섹션 관리</h2>
+                    <p>채용 공고와 카테고리를 관리합니다.</p>
+                    <div class="section-toggle">
+                        <label>
+                            <input type="checkbox" id="careerSectionActive" checked>
+                            섹션 활성화
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>카테고리 관리</h3>
+                    <div class="form-group">
+                        <label for="careerCategories">카테고리 (쉼표로 구분)</label>
+                        <input type="text" id="careerCategories" placeholder="개발, 디자인, 사업, 운영">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>채용 공고 관리</h3>
+                    
+                    <!-- 필터링 옵션 -->
+                    <div class="filter-section">
+                        <div class="filter-controls">
+                            <label class="filter-label">상태별 보기:</label>
+                            <div class="filter-buttons">
+                                <button id="showAllPosts" class="filter-btn active" data-filter="all">전체</button>
+                                <button id="showActivePosts" class="filter-btn" data-filter="active">채용중</button>
+                                <button id="showClosedPosts" class="filter-btn" data-filter="closed">채용마감</button>
+                            </div>
+                        </div>
+                        <div class="filter-info">
+                            <span id="filterStatus" class="filter-status">전체 공고를 표시 중입니다</span>
+                        </div>
+                    </div>
+                    
+                    <div id="careerPostsList" class="accordion-list">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button id="addCareerPost" class="btn btn-outline">공고 추가</button>
+                </div>
+            </section>
+
+            <!-- 푸터 섹션 -->
+            <section id="footer-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>푸터 섹션 관리</h2>
+                    <p>푸터의 텍스트, 로고, SNS 링크를 관리합니다.</p>
+                </div>
+                
+                <div class="form-section">
+                    <h3>기본 설정</h3>
+                    <div class="form-group">
+                        <label for="footerTitle">푸터 타이틀 (첫 번째 줄)</label>
+                        <input type="text" id="footerTitle" placeholder="하늘을 설계하다">
+                        <small class="form-help">푸터의 첫 번째 줄에 표시될 텍스트입니다</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="footerSubtitle">푸터 서브타이틀 (두 번째 줄)</label>
+                        <input type="text" id="footerSubtitle" placeholder="모든 현장의 안전과 효율을 동시에">
+                        <small class="form-help">푸터의 두 번째 줄에 표시될 텍스트입니다</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="footerButtonText">버튼 텍스트</label>
+                        <input type="text" id="footerButtonText" placeholder="문의하기">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>로고 이미지</h3>
+                    <div class="image-upload-zone" data-dropzone="footer-logo">
+                        <div class="upload-placeholder">
+                            <p>여기에 파일을 드래그하거나 클릭하여 업로드</p>
+                            <p class="file-info">지원 형식: JPG, PNG, GIF, WebP, SVG, MP4 | 최대 10MB</p>
+                            <input type="file" id="footerLogoUpload" accept="image/*,video/mp4,.svg" class="file-input-hidden">
+                        </div>
+                    </div>
+                    <div id="footerLogoPreview" class="image-preview"></div>
+                </div>
+
+                <div class="form-section">
+                    <h3>SNS 링크</h3>
+                    <div class="form-group">
+                        <label for="instagramLink">Instagram</label>
+                        <input type="url" id="instagramLink" placeholder="https://instagram.com/aerogrid">
+                    </div>
+                    <div class="form-group">
+                        <label for="linkedinLink">LinkedIn</label>
+                        <input type="url" id="linkedinLink" placeholder="https://linkedin.com/company/aerogrid">
+                    </div>
+                    <div class="form-group">
+                        <label for="youtubeLink">YouTube</label>
+                        <input type="url" id="youtubeLink" placeholder="https://youtube.com/@aerogrid">
+                    </div>
+                    <div class="form-group">
+                        <label for="blogLink">Blog</label>
+                        <input type="url" id="blogLink" placeholder="https://blog.aerogrid.com">
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEO 섹션 -->
+            <section id="seo-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>SEO 설정</h2>
+                    <p>검색 엔진 최적화를 위한 메타데이터를 관리합니다.</p>
+                </div>
+                
+                <div class="form-section">
+                    <h3>기본 SEO</h3>
+                    <div class="form-group">
+                        <label for="seoTitle">페이지 타이틀</label>
+                        <input type="text" id="seoTitle" placeholder="AEROGRID - 하늘을 설계하다">
+                    </div>
+                    <div class="form-group">
+                        <label for="seoDescription">메타 설명</label>
+                        <textarea id="seoDescription" rows="3" placeholder="산업용 자율비행 드론부터 관제·AI 비전까지, 에어로그리드와 함께 미래를 설계하세요."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="seoKeywords">키워드 (쉼표로 구분)</label>
+                        <input type="text" id="seoKeywords" placeholder="드론, AI, 원격관제, 클라우드, 자율비행, 측량, 모니터링">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>소셜 미디어</h3>
+                    <div class="form-group">
+                        <label for="ogImage">Open Graph 이미지</label>
+                        <div class="image-upload-zone" data-dropzone="og-image">
+                            <div class="upload-placeholder">
+                                <p>여기에 파일을 드래그하거나 클릭하여 업로드</p>
+                                <p class="file-info">지원 형식: JPG, PNG, GIF, WebP, MP4 | 최대 10MB</p>
+                                <input type="file" id="ogImageUpload" accept="image/*,video/mp4" class="file-input-hidden">
+                            </div>
+                        </div>
+                        <div id="ogImagePreview" class="image-preview"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 로딩 오버레이 -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>처리 중...</p>
+    </div>
+
+    <!-- 알림 토스트 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
