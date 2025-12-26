@@ -2,10 +2,6 @@ node_modules/
 .cursor/
 dist/
 docs/
-
-# SJW_NFT 폴더 외의 모든 파일/폴더 무시
-/*
-!SJW_NFT/
 .DS_Store
 __*.txt
 *.mp4
@@ -14,8 +10,9 @@ test-fixed/
 test/
 scripts/
 src/
+SJW_NFT/
 *.md
-!SJW_NFT/README.md
+!README.md
 Dockerfile
 LICENSE
 bun.lock
@@ -23,3 +20,4 @@ package.json
 smithery.yaml
 tsconfig.json
 tsup.config.ts
+DRAGME.md
