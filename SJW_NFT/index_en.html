@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJ World - NFT Education Platform</title>
+    <!-- Local font preload (stabilize first paint) -->
+    <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <!-- ✅ Swiper: Hero~Vision full paging -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <!-- SVG filter definition (GNB liquid glass) -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <filter id="gnb-glass" primitiveUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="8" seed="7" result="turbulence"/>
+                <feGaussianBlur in="turbulence" stdDeviation="2" result="smoothTurbulence"/>
+                <feDisplacementMap in="SourceGraphic" in2="smoothTurbulence" scale="1" xChannelSelector="R" yChannelSelector="G" result="displacement"/>
+            </filter>
+        </defs>
+    </svg>
+</head>
+<body id="top">
+    <!-- GNB (Global Navigation Bar) -->
+    <nav class="gnb">
+        <div class="gnb-container">
+            <!-- Main Navigation -->
+            <div class="gnb-main">
+                <a href="#top" class="gnb-logo">
+                    <img src="img/logo.png" alt="SJ World" class="gnb-logo-img">
+                </a>
+                <div class="gnb-menu-wrapper">
+                    <div class="gnb-menu">
+                        <a href="#vision" class="gnb-menu-item">VISION</a>
+                        <a href="#structure" class="gnb-menu-item">STRUCTURE</a>
+                        <a href="#nft" class="gnb-menu-item">NFT</a>
+                        <a href="#roadmap" class="gnb-menu-item">ROADMAP</a>
+                    </div>
+                    <button class="gnb-issue-btn">Issue NFT</button>
+                    <!-- Mobile (≤768px): hamburger menu -->
+                    <button class="gnb-hamburger" type="button" aria-label="Open menu" aria-controls="gnb-mobile-menu" aria-expanded="false">
+                        <img class="gnb-hamburger-icon" src="img/icon_menu.svg" alt="" aria-hidden="true">
+                    </button>
+                </div>
+            </div>
+            <!-- Language Selection -->
+            <div class="gnb-sub">
+                <a href="index.html" class="gnb-lang" aria-label="Korean page">KO</a>
+                <a href="index_en.html" class="gnb-lang active" aria-label="English page">EN</a>
+            </div>
+        </div>
+
+        <!-- Mobile (≤768px): overlay menu -->
+        <div id="gnb-mobile-menu" class="gnb-mobile-menu" hidden>
+            <div class="gnb-mobile-menu-items">
+                <a href="#vision" class="gnb-menu-item">VISION</a>
+                <a href="#structure" class="gnb-menu-item">STRUCTURE</a>
+                <a href="#nft" class="gnb-menu-item">NFT</a>
+                <a href="#roadmap" class="gnb-menu-item">ROADMAP</a>
+            </div>
+            <button class="gnb-mobile-issue-btn" type="button">Issue NFT</button>
+            <div class="gnb-mobile-lang" aria-label="Language selection">
+                <a href="index.html" class="gnb-lang" aria-label="Korean page">KO</a>
+                <a href="index_en.html" class="gnb-lang active" aria-label="English page">EN</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile (≤768px): floating issue button -->
+    <button class="mobile-issue-btn" type="button">Issue NFT</button>
+
+    <!-- ✅ Hero~Vision: Full paging (Swiper) -->
+    <div class="hv-pager swiper" id="hvPager" aria-label="Hero and Vision paging">
+        <div class="hv-pager-bg" aria-hidden="true">
+            <div class="vision-video-container">
+                <video class="vision-video" autoplay muted loop playsinline>
+                    <source src="img/global_video.mp4" type="video/mp4">
+                </video>
+            </div>
+            <div class="vision-image-container">
+                <img src="img/vision_sjw.jpg" alt="SJ World Vision" class="vision-image">
+            </div>
+        </div>
+
+        <div class="swiper-wrapper">
+            <section class="hero-section swiper-slide" id="hero">
+                <div class="hero-image">
+                    <video autoplay muted loop playsinline>
+                        <source src="img/hero_motion.mp4" type="video/mp4">
+                        <img src="img/hero.jpg" alt="SJ World Hero">
+                    </video>
+                </div>
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 class="hero-main-text">
+                            <span class="text-content">
+                                <div class="title-line" data-line="0"><span class="line-text">Welcome to SJ World</span></div>
+                            </span>
+                        </h1>
+                        <p class="hero-sub-text"><span class="text-content">A place where your name, learning, and story are recorded as an NFT.</span></p>
+                    </div>
+                    <div class="hero-scroll-indicator">
+                        <img src="img/scroll_arrow.svg" alt="Scroll Down" class="scroll-arrow-img">
+                    </div>
+                </div>
+            </section>
+
+            <section class="vision-slide vision-slide-1 swiper-slide" id="vision">
+                <div class="vision-intro-anchor"></div>
+                <div class="vision-text-1">
+                    <h1 class="vision-title-1">
+                        <span class="text-content">
+                            <div class="title-line" data-line="0"><span class="line-text">SJ World is a global campus built on Web3.0,</span></div>
+                            <div class="title-line" data-line="1"><span class="line-text">where young people worldwide learn and grow together.</span></div>
+                        </span>
+                    </h1>
+                </div>
+            </section>
+
+            <section class="vision-slide vision-slide-2 swiper-slide" id="vision-2" aria-label="Vision page 2">
+                <div class="vision-text-2">
+                    <h1 class="vision-title-2">
+                        <span class="text-content">
+                            <div class="title-line" data-line="0"><span class="line-text">Here, we design together, learn together,</span></div>
+                            <div class="title-line" data-line="1"><span class="line-text">and build a new future of education beyond borders.</span></div>
+                        </span>
+                    </h1>
+                </div>
+            </section>
+
+            <section class="vision-slide vision-slide-3 swiper-slide" id="slogan" aria-label="Slogan">
+                <div class="vision-text-3">
+                    <h1 class="vision-title-3">
+                        <span class="text-content">
+                            <div class="title-line" data-line="0"><span class="line-text">Own Your Knowledge,</span></div>
+                            <div class="title-line" data-line="1"><span class="line-text">Create Your World</span></div>
+                        </span>
+                    </h1>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Unified background (Structure → Footer) -->
+    <div class="structure-to-footer-wrapper">
+    <!-- Structure Section -->
+    <section class="structure-section" id="structure">
+        <div class="structure-container">
+            <h2 class="structure-title slide-in">A learner-led education civilization beyond borders</h2>
+            <p class="structure-subtitle slide-in">
+                SJ World is more than a platform.<br>
+                Learning is recorded via NFTs, communities govern via DAOs,<br>
+                and contributions are rewarded with SJT tokens—building a new education paradigm.
+            </p>
+            
+            <div class="cycle-container slide-in">
+                <div class="center-text">Web 3.0</div>
+                <svg class="arrows-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <!-- ✅ Arrow glossy glow filter (works reliably on mobile Safari) -->
+                        <filter id="cycle-glow" x="-80" y="-80" width="660" height="660" filterUnits="userSpaceOnUse">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur1"/>
+                            <feColorMatrix in="blur1" type="matrix"
+                                values="0 0 0 0 0.447
+                                        0 0 0 0 1
+                                        0 0 0 0 1
+                                        0 0 0 0.85 0" result="glow1"/>
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur2"/>
+                            <feColorMatrix in="blur2" type="matrix"
+                                values="0 0 0 0 0.447
+                                        0 0 0 0 1
+                                        0 0 0 0 1
+                                        0 0 0 0.35 0" result="glow2"/>
+                            <feMerge>
+                                <feMergeNode in="glow2"/>
+                                <feMergeNode in="glow1"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                        <marker id="arrowhead" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto">
+                            <polygon points="0 0, 5 2.5, 0 5" fill="#ffffff" filter="url(#cycle-glow)" />
+                        </marker>
+                    </defs>
+                    <path class="arrow-path" marker-end="url(#arrowhead)" filter="url(#cycle-glow)" d="M 318.4 62 A 200 200 0 0 1 447 284.7" />
+                    <path class="arrow-path" marker-end="url(#arrowhead)" filter="url(#cycle-glow)" d="M 378.6 403.2 A 200 200 0 0 1 121.4 403.2" />
+                    <path class="arrow-path" marker-end="url(#arrowhead)" filter="url(#cycle-glow)" d="M 53 284.7 A 200 200 0 0 1 181.6 62" />
+                </svg>
+                <div class="node nft">
+                    <img src="img/structure_01_nft.png" alt="NFT Icon">
+                    <span>NFT</span>
+                </div>
+                <div class="node token">
+                    <img src="img/structure_03_tokken.png" alt="Token Icon">
+                    <span>TOKEN</span>
+                </div>
+                <div class="node dao">
+                    <img src="img/structure_02_dao.png" alt="DAO Icon">
+                    <span>DAO</span>
+                </div>
+            </div>
+            
+            <div class="structure-cards">
+                <div class="structure-card slide-in" data-tilt>
+                    <div class="glow-effect"></div>
+                    <div class="noise-layer"></div>
+                    <div class="card-content">
+                        <img src="img/structure_01_nft.png" alt="NFT" class="crystal-img">
+                        <div class="card-text-group">
+                            <h3>Learn to Own</h3>
+                            <p>Record and tokenize learning, projects, and activities through NFTs.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="structure-card slide-in" data-tilt>
+                    <div class="glow-effect"></div>
+                    <div class="noise-layer"></div>
+                    <div class="card-content">
+                        <img src="img/structure_02_dao.png" alt="DAO" class="crystal-img">
+                        <div class="card-text-group">
+                            <h3>DAO for Education</h3>
+                            <p>Propose, vote, and decide together—governed by the community.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="structure-card slide-in" data-tilt>
+                    <div class="glow-effect"></div>
+                    <div class="noise-layer"></div>
+                    <div class="card-content">
+                        <img src="img/structure_03_tokken.png" alt="Token" class="crystal-img">
+                        <div class="card-text-group">
+                            <h3>Earn by Contributing</h3>
+                            <p>Earn rights and SJT rewards as your contribution score grows.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NFT Section -->
+    <section class="nft-section" id="nft">
+        <div class="nft-container">
+            <div class="nft-carousel-wrapper slide-in">
+                <div class="nft-carousel">
+                    <div class="nft-card active" data-index="0">
+                        <div class="nft-card-content">
+                            <div class="nft-card-left-column">
+                                <div class="nft-card-text-group">
+                                    <h2 class="nft-card-title">Your NFT student ID, issued the moment you enroll</h2>
+                                    <p class="nft-card-subtitle">
+                                        As soon as you join SJ World, your digital student ID is issued as an NFT—recording your learning journey.<br>
+                                        It becomes your identity and your ticket into a new world.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="nft-card-right-column">
+                                <div class="nft-card-image-area">
+                                    <img src="img/nft_01.png" alt="NFT ID Card" class="nft-card-image" draggable="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="nft-card" data-index="1">
+                        <div class="nft-card-content">
+                            <div class="nft-card-left-column">
+                                <div class="nft-card-text-group">
+                                    <h2 class="nft-card-title">Your NFT grows and shines as you progress</h2>
+                                    <p class="nft-card-subtitle">
+                                        In SJ World, activity is growth—and growth increases your NFT’s value.<br>
+                                        Get community privileges, SJT rewards, scholarships, and more. Rare NFTs symbolize influence in the community.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="nft-card-right-column">
+                                <div class="nft-card-image-area">
+                                    <img src="img/nft_02.png" alt="NFT Card" class="nft-card-image" draggable="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="nft-card" data-index="2">
+                        <div class="nft-card-content">
+                            <div class="nft-card-left-column">
+                                <div class="nft-card-text-group">
+                                    <h2 class="nft-card-title">Open a world where you grow together—not alone</h2>
+                                    <p class="nft-card-subtitle">
+                                        SJ World NFTs are more than assets.<br>
+                                        Your level unlocks new learning and participation opportunities, connecting you with peers to build projects and collaborate.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="nft-card-right-column">
+                                <div class="nft-card-image-area">
+                                    <img src="img/nft_03.png" alt="NFT Card" class="nft-card-image" draggable="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="nft-card" data-index="3">
+                        <div class="nft-card-content">
+                            <div class="nft-card-left-column">
+                                <div class="nft-card-text-group">
+                                    <h2 class="nft-card-title">Record, own, and prove your learning</h2>
+                                    <p class="nft-card-subtitle">
+                                        Attendance, assignments, and projects are recorded into your NFT automatically.<br>
+                                        After graduation, it becomes an official digital portfolio recognized as an evaluation asset.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="nft-card-right-column">
+                                <div class="nft-card-image-area">
+                                    <img src="img/nft_04.png" alt="NFT Card" class="nft-card-image" draggable="false">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ ≥769px: fixed outside navigation (does not move with cards) -->
+                <div class="nft-carousel-nav" aria-label="NFT carousel navigation">
+                    <button class="nav-btn prev-btn nft-carousel-nav-btn" type="button" aria-label="Previous card"></button>
+                    <button class="nav-btn next-btn nft-carousel-nav-btn" type="button" aria-label="Next card"></button>
+                </div>
+            </div>
+            
+            <div class="nft-issue-btn-wrapper slide-in">
+                <button class="nft-issue-btn"><span class="btn-label">Issue NFT</span></button>
+            </div>
+            
+            <div class="nft-level-intro">
+                <div class="nft-level-intro-content">
+                    <div class="nft-level-text">
+                        <h2 class="nft-level-title slide-in">Your NFT<br>levels up</h2>
+                        <p class="nft-level-description slide-in">Your activity in SJ World converts into points—unlocking new levels and privileges.</p>
+                    </div>
+                    <div class="nft-level-visual slide-in">
+                        <div class="nft-scroll-container">
+                            <button class="nav-btn nft-level-arrow nft-level-arrow-prev" type="button" aria-label="Previous level"></button>
+                            <div class="nft-level-content-wrapper">
+                                <div class="nft-level-image-wrapper">
+                                    <img src="img/nft_level1.jpg" alt="NFT Level 1" class="nft-level-image active" data-level="1" draggable="false">
+                                    <img src="img/nft_level2.jpg" alt="NFT Level 2" class="nft-level-image" data-level="2" draggable="false">
+                                    <img src="img/nft_level3.jpg" alt="NFT Level 3" class="nft-level-image" data-level="3" draggable="false">
+                                    <img src="img/nft_level4.jpg" alt="NFT Level 4" class="nft-level-image" data-level="4" draggable="false">
+                                    <img src="img/nft_level5.jpg" alt="NFT Level 5" class="nft-level-image" data-level="5" draggable="false">
+                                </div>
+                                <div class="nft-level-bar">
+                                    <span class="level-info">Lv.1 Explorer (Beginner)</span>
+                                    <button type="button" class="view-details" aria-haspopup="dialog" aria-controls="nft-level-modal-overlay">
+                                        View details
+                                    </button>
+                                </div>
+                                <div class="nft-level-indicators">
+                                    <div class="indicator active" data-index="0"></div>
+                                    <div class="indicator" data-index="1"></div>
+                                    <div class="indicator" data-index="2"></div>
+                                    <div class="indicator" data-index="3"></div>
+                                    <div class="indicator" data-index="4"></div>
+                                </div>
+                            </div>
+                            <button class="nav-btn nft-level-arrow nft-level-arrow-next" type="button" aria-label="Next level"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Roadmap Section -->
+    <section class="roadmap-section" id="roadmap">
+        <div class="roadmap-container">
+            <h2 class="roadmap-title slide-in">Beyond NFTs: the evolution of a digital campus expanding into learning, rewards, and governance</h2>
+            <p class="roadmap-subtitle slide-in">SJ World builds a Web3 education ecosystem—phase by phase.</p>
+            <div class="roadmap-timeline">
+                <div class="timeline-item slide-in" data-phase="01">
+                    <div class="phase-dot"></div>
+                    <div class="phase-number-label">01 Phase</div>
+                    <h3 class="timeline-heading">UPGRADE</h3>
+                    <p class="timeline-subheading">Feature evolution & NFT system refinement</p>
+                    <ul class="timeline-list">
+                        <li>Improve the Genesis NFT system</li>
+                        <li>Standardize student ID issuance (migrate to ERC-721)</li>
+                        <li>Design phased NFT upgrades</li>
+                    </ul>
+                </div>
+                <div class="timeline-item slide-in" data-phase="02">
+                    <div class="phase-dot"></div>
+                    <div class="phase-number-label">02 Phase</div>
+                    <h3 class="timeline-heading">ONBOARD</h3>
+                    <p class="timeline-subheading">Mass adoption & community foundation</p>
+                    <ul class="timeline-list">
+                        <li>Free Student Soul ID (SBT format)</li>
+                        <li>Open DAO communities by country/major</li>
+                        <li>Build onboarding programs with education partners</li>
+                    </ul>
+                </div>
+                <div class="timeline-item slide-in" data-phase="03">
+                    <div class="phase-dot"></div>
+                    <div class="phase-number-label">03 Phase</div>
+                    <h3 class="timeline-heading">REVEAL</h3>
+                    <p class="timeline-subheading">PFP reveal</p>
+                    <ul class="timeline-list">
+                        <li>Summon SJ PFP NFTs</li>
+                        <li>Reveal characters based on name/major/country</li>
+                        <li>Activate DAO mini-clubs (e.g., Major DAO, Name DAO)</li>
+                        <li>Visualize NFT portfolios</li>
+                    </ul>
+                </div>
+                <div class="timeline-item slide-in" data-phase="04">
+                    <div class="phase-dot"></div>
+                    <div class="phase-dot phase-dot-end"></div>
+                    <div class="phase-number-label">04 Phase</div>
+                    <h3 class="timeline-heading">GROWTH</h3>
+                    <p class="timeline-subheading">Ecosystem expansion & future building</p>
+                    <ul class="timeline-list">
+                        <li>Onboard millions of young people globally</li>
+                        <li>Run autonomous curricula via DAOs</li>
+                        <li>Complete SJT token circulation</li>
+                        <li>Build networks connecting alumni, communities, and institutions</li>
+                        <li>Expand global university/institution partnerships</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Whitepaper Download Section -->
+    <section class="whitepaper-section">
+        <div class="whitepaper-container">
+            <h2 class="whitepaper-title slide-in">The roadmap that contains SJ World’s design and future</h2>
+            <p class="whitepaper-description slide-in">Explore how your NFT grows and evolves—from NFTs and points to the full community system.</p>
+            <div class="whitepaper-btn-wrapper slide-in">
+                <button class="whitepaper-button"><span class="btn-label">View Whitepaper</span></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="footer-section">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <img src="img/logo.png" alt="SJ World" class="footer-logo">
+                    <p class="footer-copyright">©2025 SJWORLD ALL RIGHTS RESERVED.</p>
+                </div>
+                <div class="footer-right">
+                    <nav class="footer-nav">
+                        <a href="#" class="footer-link footer-link-privacy"><span class="footer-link-text">Privacy<wbr>Policy</span></a>
+                        <a href="https://seojeong.ac.kr/main/index.do#n" class="footer-link footer-link-external" target="_blank" rel="noopener noreferrer">
+                            <span class="footer-link-text">Seojeong University</span>
+                            <img src="img/icon_outlink.svg" alt="External link" class="footer-link-icon">
+                        </a>
+                        <a href="#top" class="footer-link footer-link-top" id="top-link">
+                            <span class="footer-link-text">TOP</span>
+                            <img src="img/icon_top.svg" alt="Back to top" class="footer-link-icon">
+                        </a>
+                    </nav>
+                    <div class="footer-social">
+                        <a href="#" class="social-icon" aria-label="Discord">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" fill="currentColor"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-icon" aria-label="YouTube">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="currentColor"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="social-icon" aria-label="Instagram">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" fill="currentColor"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-slogan">
+            <div class="footer-slogan-wrapper">
+                <div class="footer-slogan-content">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                </div>
+                <div class="footer-slogan-content" aria-hidden="true">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                    <img src="img/star.svg" alt="*" class="slogan-separator">
+                    <span class="slogan-text">OWN YOUR KNOWLEDGE, CREATE YOUR WORLD</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+    </div>
+    <!-- Unified background end -->
+
+    <!-- ✅ NFT level requirements/privileges modal -->
+    <div class="nft-level-modal-overlay" id="nft-level-modal-overlay" hidden aria-hidden="true">
+        <div class="nft-level-modal" role="dialog" aria-modal="true" aria-labelledby="nft-level-modal-title" tabindex="-1">
+            <div class="nft-level-modal-header">
+                <h2 class="nft-level-modal-title" id="nft-level-modal-title">NFT Level Requirements &amp; Privileges</h2>
+                <button type="button" class="nft-level-modal-close" aria-label="Close">
+                    <img src="img/icon_popup_close.svg" alt="">
+                </button>
+            </div>
+
+            <div class="nft-level-modal-body" role="document">
+                <table class="nft-level-modal-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Level</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">NFT</th>
+                            <th scope="col">Requirements</th>
+                            <th scope="col">Privileges</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="nft-level-modal-row-desktop">
+                            <td>Lv. 1</td>
+                            <td>Explorer (Beginner)</td>
+                            <td>Student Soul ID</td>
+                            <td>Free for anyone, Soulbound NFT</td>
+                            <td>Basic Discord access, community browsing, beginner guide access</td>
+                        </tr>
+                        <tr class="nft-level-modal-row-mobile">
+                            <td colspan="5">
+                                <div class="nft-level-mobile-card">
+                                    <div class="nft-level-mobile-head">
+                                        <div class="nft-level-mobile-lv">Lv. 1</div>
+                                        <div class="nft-level-mobile-role">
+                                            Explorer (Beginner)
+                                            <span class="nft-level-mobile-nft">Student Soul ID</span>
+                                        </div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Requirements</span>
+                                        <div class="nft-level-mobile-text">Free for anyone, Soulbound NFT</div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Privileges</span>
+                                        <div class="nft-level-mobile-text">Basic Discord access, community browsing, beginner guide access</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr class="nft-level-modal-row-desktop">
+                            <td>Lv. 2</td>
+                            <td>Builder (Active)</td>
+                            <td>Genesis ID</td>
+                            <td>Issued automatically upon enrollment; activity records start</td>
+                            <td>Full Discord access, community participation, eligible to level up</td>
+                        </tr>
+                        <tr class="nft-level-modal-row-mobile">
+                            <td colspan="5">
+                                <div class="nft-level-mobile-card">
+                                    <div class="nft-level-mobile-head">
+                                        <div class="nft-level-mobile-lv">Lv. 2</div>
+                                        <div class="nft-level-mobile-role">
+                                            Builder (Active)
+                                            <span class="nft-level-mobile-nft">Genesis ID</span>
+                                        </div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Requirements</span>
+                                        <div class="nft-level-mobile-text">Issued automatically upon enrollment; activity records start</div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Privileges</span>
+                                        <div class="nft-level-mobile-text">Full Discord access, community participation, eligible to level up</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr class="nft-level-modal-row-desktop">
+                            <td>Lv. 3</td>
+                            <td>Contributor</td>
+                            <td>Genesis ID</td>
+                            <td>Meet criteria (attendance, assignments, early DAO activity) + minimum score</td>
+                            <td>Unlock customization, priority invites to events, earn points</td>
+                        </tr>
+                        <tr class="nft-level-modal-row-mobile">
+                            <td colspan="5">
+                                <div class="nft-level-mobile-card">
+                                    <div class="nft-level-mobile-head">
+                                        <div class="nft-level-mobile-lv">Lv. 3</div>
+                                        <div class="nft-level-mobile-role">
+                                            Contributor
+                                            <span class="nft-level-mobile-nft">Genesis ID</span>
+                                        </div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Requirements</span>
+                                        <div class="nft-level-mobile-text">Meet criteria (attendance, assignments, early DAO activity) + minimum score</div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Privileges</span>
+                                        <div class="nft-level-mobile-text">Unlock customization, priority invites to events, earn points</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr class="nft-level-modal-row-desktop">
+                            <td>Lv. 4</td>
+                            <td>Leader</td>
+                            <td>Master NFT</td>
+                            <td>Participate in DAO proposals &amp; voting; leadership records included</td>
+                            <td>Scholarship recommendation, event priority, listed as community leader</td>
+                        </tr>
+                        <tr class="nft-level-modal-row-mobile">
+                            <td colspan="5">
+                                <div class="nft-level-mobile-card">
+                                    <div class="nft-level-mobile-head">
+                                        <div class="nft-level-mobile-lv">Lv. 4</div>
+                                        <div class="nft-level-mobile-role">
+                                            Leader
+                                            <span class="nft-level-mobile-nft">Master NFT</span>
+                                        </div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Requirements</span>
+                                        <div class="nft-level-mobile-text">Participate in DAO proposals &amp; voting; leadership records included</div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Privileges</span>
+                                        <div class="nft-level-mobile-text">Scholarship recommendation, event priority, listed as community leader</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr class="nft-level-modal-row-desktop">
+                            <td>Lv. 5</td>
+                            <td>Pioneer (Founder)</td>
+                            <td>Master NFT</td>
+                            <td>Project proposals accepted, mentoring activities + selection or recommendation</td>
+                            <td>Right to issue own NFTs, join promo content, global representative status</td>
+                        </tr>
+                        <tr class="nft-level-modal-row-mobile">
+                            <td colspan="5">
+                                <div class="nft-level-mobile-card">
+                                    <div class="nft-level-mobile-head">
+                                        <div class="nft-level-mobile-lv">Lv. 5</div>
+                                        <div class="nft-level-mobile-role">
+                                            Pioneer (Founder)
+                                            <span class="nft-level-mobile-nft">Master NFT</span>
+                                        </div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Requirements</span>
+                                        <div class="nft-level-mobile-text">Project proposals accepted, mentoring activities + selection or recommendation</div>
+                                    </div>
+                                    <div class="nft-level-mobile-block">
+                                        <span class="nft-level-mobile-tag">Privileges</span>
+                                        <div class="nft-level-mobile-text">Right to issue own NFTs, join promo content, global representative status</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
