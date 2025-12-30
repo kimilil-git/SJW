@@ -240,10 +240,10 @@ function initHvPagerSwiper() {
         if (now < hvEdgeLockUntil) {
             if (e.touches && e.touches.length > 0) {
                 const currentY = e.touches[0].clientY;
-                // 아래로 스와이프 (구조로 내려가기)
-                if (currentY > touchStartY) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                // ✅ 구조로 내려가기 의도 = 손가락이 "위로" 스와이프(dy < 0)
+                if (currentY < touchStartY) {
+                  e.preventDefault();
+                  e.stopPropagation();
                 }
             }
             return;
@@ -252,34 +252,35 @@ function initHvPagerSwiper() {
         if (!e.touches || !e.touches.length) return;
         const currentY = e.touches[0].clientY;
         const dy = currentY - touchStartY;
-        
-        // ✅ 아래로 스와이프 (구조로 내려가기)
-        if (dy > 0) {
+
+            // ✅ 구조로 내려가기(페이지 down) = 손가락 위로 스와이프(dy < 0)
+            if (dy < 0) {
             // 이미 구조로 내려가도록 허용된 짧은 윈도우면 통과(자연 스크롤)
             if (now < hvAllowDownToStructureUntil) return;
-            
-            e.preventDefault();
-            e.stopPropagation();
-            
+
+                e.preventDefault();
+                e.stopPropagation();
+
             if (!hvSloganDownAccAt || (now - hvSloganDownAccAt) > HV_SLOGAN_DOWN_ACC_WINDOW_MS) {
                 hvSloganDownAcc = 0;
             }
-            hvSloganDownAccAt = now;
-            // 터치 거리를 deltaY와 유사하게 정규화 (모바일은 더 큰 값이 나올 수 있음)
-            hvSloganDownAcc += Math.abs(dy) * 0.5; // 휠 이벤트와 비슷한 스케일로 조정
-            
-            if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
-                return; // ✅ 계속 슬로건에 "락"
-            }
-            
-            // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
-            hvSloganDownAcc = 0;
-            hvAllowDownToStructureUntil = now + 1200;
-            
-            // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
-            hvCanScrollToStructure = true;
-            syncHvSwiperMousewheelWithPageScroll();
-        }
+    hvSloganDownAccAt = now;
+
+    // 위로 스와이프 거리 누적
+    hvSloganDownAcc += Math.abs(dy) * 0.5;
+
+    if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
+        return; // ✅ 계속 슬로건에 "락"
+    }
+
+    // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
+    hvSloganDownAcc = 0;
+    hvAllowDownToStructureUntil = now + 1200;
+
+    // ✅ 이제부터 구조로 내려갈 수 있도록 페이지 스크롤을 허용
+    hvCanScrollToStructure = true;
+    syncHvSwiperMousewheelWithPageScroll();
+}
     };
     const onPagerTouchEnd = () => {
         touchStartY = null;
