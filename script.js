@@ -207,7 +207,7 @@ function initHvPagerSwiper() {
 
             // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
             hvSloganDownAcc = 0;
-            hvAllowDownToStructureUntil = now + 650;
+            hvAllowDownToStructureUntil = now + 1200;
 
             // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
             hvCanScrollToStructure = true;
@@ -274,7 +274,7 @@ function initHvPagerSwiper() {
             
             // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
             hvSloganDownAcc = 0;
-            hvAllowDownToStructureUntil = now + 650;
+            hvAllowDownToStructureUntil = now + 1200;
             
             // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
             hvCanScrollToStructure = true;
@@ -457,6 +457,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ✅ 히어로~비전: Swiper 풀페이징 초기화
     initHvPagerSwiper();
+
+    // [FIX v4] Preload vision video early to avoid stutter on first entry (hero → vision)
+    // - 영상 소스 교체/로드가 "전환 순간"에 발생하면 프레임 드랍(느려짐/떨림) 체감이 생길 수 있음
+    setTimeout(() => {
+        try {
+            const v = document.querySelector('.vision-video');
+            if (v) {
+                v.preload = 'auto';
+                // Set correct source once so browser can fetch before the first scroll snap.
+                updateVisionVideoSource(true);
+                if (typeof v.load === 'function') v.load();
+            }
+        } catch (e) {}
+    }, 0);
+
     
     // GNB 메뉴 클릭 시 해당 섹션으로 스크롤
     const gnbMenuItems = document.querySelectorAll('.gnb-menu-item');
@@ -864,7 +879,18 @@ let visionAutoMidRafId = 0;
 let visionAutoMidLockUntil = 0;
 // ✅ Swiper 풀페이징을 사용하는 경우에는 기존 바닐라 스텝 페이징 로직은 완전히 비활성화(충돌 방지)
 const VISION_AUTO_STEPS_ENABLED = !USE_HV_SWIPER_PAGING;
-const VISION_STEP_DURATION_MS = 980;          // ✅ 자동 스크롤 1회 재생 길이(원하면 미세조정)
+const VISION_STEP_DURATION_MS = 980;
+const VISION_STEP_DURATION_HERO_TO_V1_MS = 650;  // [FIX v4] faster hero → vision step1
+const VISION_STEP_DURATION_V1_TO_V2_MS   = 550;  // [FIX v4] faster vision step1 → step2
+
+function getVisionStepDurationMs(nextStepIndex, durationMs) {
+    // Only override when caller is using the default step duration.
+    if (typeof VISION_STEP_DURATION_MS !== 'undefined' && durationMs !== VISION_STEP_DURATION_MS) return durationMs;
+    if (nextStepIndex === 1) return VISION_STEP_DURATION_HERO_TO_V1_MS;
+    if (nextStepIndex === 2) return VISION_STEP_DURATION_V1_TO_V2_MS;
+    return durationMs;
+}
+          // ✅ 자동 스크롤 1회 재생 길이(원하면 미세조정)
 
 // ✅ GNB(Vision) 클릭과 동일한 "도착 시점"을 만들기 위한 기준값
 // - GNB 코드에서 사용하던 값과 반드시 동일해야 스냅이 흔들리지 않음
@@ -939,6 +965,12 @@ function getAbsTop(el) {
     return r.top + window.pageYOffset;
 }
 
+// ✅ 히어로/비전 스텝 제어 구간 상태(경계 떨림 방지용 히스테리시스)
+// - structure 섹션이 뷰포트에 '살짝' 걸칠 때 true/false가 빠르게 토글되면 wheel/touch preventDefault가 반복되어
+//   슬로우 모션/떨림 체감이 생길 수 있음.
+// - 아래 상태 머신은 한 번 '자연 스크롤'로 넘어가면, structure가 충분히 위로 빠질 때까지 다시 스텝 제어를 켜지 않음.
+let hvZoneState = true;
+
 function isInHeroVisionZone() {
     // ✅ 스텝(휠/터치 가로채기) 적용 범위 제한
     // - 히어로~비전 구간에서만 스텝 스크롤을 적용하고
@@ -949,15 +981,24 @@ function isInHeroVisionZone() {
     const structureSection = document.querySelector('#structure');
     if (!structureSection) return true;
 
-    // ✅ 구조 섹션이 "조금이라도 화면에 보이면" 스텝 제어를 끄고 자연 스크롤로 복귀
-    // - 요구사항: 구조 섹션은 백스크롤 시에도 올라오는 방식과 동일하게(자연스럽게) 역으로 하강해야 함
-    // - 즉, 구조가 화면에 걸린 상태에서는 페이징이 절대 개입하면 안 됨
     const r = structureSection.getBoundingClientRect();
-    const isStructureVisible = r.bottom > 0 && r.top < window.innerHeight;
-    if (isStructureVisible) return false;
+    const vh = window.innerHeight || 0;
 
-    // 구조 섹션이 화면에 안 보이는 상태(= 히어로/비전 영역)에서는 스텝 제어 허용
-    return true;
+    // 히스테리시스 임계값
+    // - OFF: structure가 충분히 들어왔을 때(상단이 화면 상단 쪽으로 진입)
+    // - ON : structure가 충분히 빠졌을 때(상단이 화면 아래로 내려감)
+    const OFF_TOP_THRESHOLD = vh * 0.20; // structure top 이 뷰포트 상단 20% 안쪽으로 들어오면 HV 제어 해제
+    const ON_TOP_THRESHOLD  = vh * 0.55; // structure top 이 뷰포트 높이의 55% 아래로 내려가면 HV 제어 재활성
+
+    if (hvZoneState) {
+        // HV 제어가 켜진 상태 → structure가 '확실히' 들어오면 끔
+        if (r.top <= OFF_TOP_THRESHOLD) hvZoneState = false;
+    } else {
+        // HV 제어가 꺼진 상태(자연 스크롤) → structure가 '확실히' 빠지면 다시 켬
+        if (r.top >= ON_TOP_THRESHOLD) hvZoneState = true;
+    }
+
+    return hvZoneState;
 }
 
 function isSloganActiveNow() {
@@ -1023,6 +1064,10 @@ function startVisionAutoStepToTop(targetTop, nextStepIndex, durationMs = VISION_
 
     // ✅ 자동 전환 시작 시 누적값 초기화(다음 입력에 영향 없게)
     resetVisionBackAccumulators();
+
+    // [FIX v4] speed up early transitions (hero→v1, v1→v2)
+    durationMs = getVisionStepDurationMs(nextStepIndex, durationMs);
+
 
     visionAutoMidIsPlaying = true;
     visionAutoMidLockUntil = performance.now() + durationMs + 520;
@@ -1158,6 +1203,10 @@ function startVisionAutoStep(visionSection, toProgress, nextStepIndex, durationM
 
     // ✅ 자동 전환 시작 시 누적값 초기화(다음 입력에 영향 없게)
     resetVisionBackAccumulators();
+
+    // [FIX v4] speed up early transitions (hero→v1, v1→v2)
+    durationMs = getVisionStepDurationMs(nextStepIndex, durationMs);
+
 
     visionAutoMidIsPlaying = true;
     // ✅ 자동 재생 중 사용자 스크롤 개입 방지(살짝 여유 포함)
@@ -2292,350 +2341,328 @@ function initNFTLevelDetailsModal() {
 
 // NFT 캐러셀 초기화 및 제어 (CodePen 스타일 드래그 + 화살표 버튼)
 function initNFTCarousel() {
-    const carousel = document.querySelector('.nft-carousel');
+    const carousel = document.querySelector(".nft-carousel");
     if (!carousel) return;
-    
-    const cards = Array.from(carousel.querySelectorAll('.nft-card'));
-    let currentIndex = 0;
-    let isDragging = false;
-    let hasMoved = false; // ★ 실제 드래그 여부 추적
-    let startX = 0;
-    let startY = 0; // ✅ 모바일 세로 스크롤 방해 방지용
-    let currentX = 0;
-    let dragOffset = 0; // 드래그 중 실시간 오프셋
-    let dragThreshold = 50; // 드래그 최소 거리
-    let isTransitioning = false; // 전환 중 플래그
 
-    // 1024px 이하: absolute 카드로 인해 부모 높이가 0이 되는 문제를 방지하기 위해
-    // "가장 높은 카드" 높이를 기준으로 캐러셀/카드 높이를 고정(통일)해서 전환 시 어색함을 최소화
-    // var로 선언(TDZ 방지): 초기 호출 타이밍에 상관없이 안전하게 동작하도록
-    var cachedFixedHeight = 0; // ★ 최초 1회 확정 후에는 캐시값 사용(첫 클릭 점프 방지)
-    var isMeasuringHeight = false; // ★ 중복 측정 방지(visibility hidden 고착/클래스 꼬임 방지)
-    
-    // 초기 카드 배치
-    updateCarousel();
+    // ----------------------------
+    // 0) 기존 4개 카드 내용을 템플릿으로 저장
+    // ----------------------------
+    const originalCards = Array.from(carousel.querySelectorAll(".nft-card"));
+    const templates = originalCards.map((c) => c.innerHTML);
+    const N = templates.length; // 4
 
-    function applyFixedHeight(px) {
-        if (!px || px <= 0) return;
-        cachedFixedHeight = px;
-        carousel.style.height = `${px}px`;
-        carousel.style.setProperty('--nft-card-fixed-height', `${px}px`);
-        // 혹시라도 이전 측정 중 hidden이 고착된 경우 강제로 복구
-        if (carousel.style.visibility === 'hidden') {
-            carousel.style.visibility = '';
-        }
+    if (N < 2) return;
+
+    // ----------------------------
+    // 1) carousel 안을 "렌더링 슬롯 6개"로 재구성
+    //    (5개 보이는 슬롯 + 1개 숨김 슬롯)
+    // ----------------------------
+    carousel.innerHTML = "";
+    const SLOT_COUNT = 6;
+    const slots = [];
+
+    for (let i = 0; i < SLOT_COUNT; i++) {
+        const el = document.createElement("div");
+        el.className = "nft-card";
+        carousel.appendChild(el);
+        slots.push(el);
     }
 
-    function syncCarouselHeight() {
-        if (window.innerWidth > 1024) {
-            // 1025px 이상은 CSS aspect-ratio/height 정책을 사용
-            carousel.style.removeProperty('height');
-            carousel.style.removeProperty('--nft-card-fixed-height');
-            cachedFixedHeight = 0;
-            isMeasuringHeight = false;
-            return;
+    // 역할(5개 보임 + 1개 hidden)
+    // slots[0]=L2, [1]=L1, [2]=C, [3]=R1, [4]=R2, [5]=hidden(incoming)
+    const ROLE_CLASSES = [
+        "prev-prev",
+        "prev",
+        "active",
+        "next",
+        "next-next",
+        "hidden-right", // 초기: 다음에 들어올 카드 준비(오른쪽)
+    ];
+
+    const mod = (a, b) => ((a % b) + b) % b;
+
+    let currentIndex = 0; // 중앙(C)의 데이터 index
+    let isTransitioning = false;
+
+    function setRole(el, role) {
+        el.classList.remove(
+            "prev-prev",
+            "prev",
+            "active",
+            "next",
+            "next-next",
+            "hidden",
+            "hidden-left",
+            "hidden-right",
+            "no-transform-transition"
+        );
+        el.classList.add(role);
+
+        // CSS 변수 설정 (기본 transform이 CSS 변수를 사용하도록)
+        if (role === "active") {
+            el.style.setProperty("--tx", "0%");
+            el.style.setProperty("--scale", "1");
+            el.style.setProperty("--opacity", "1");
+            el.style.zIndex = "3";
+        } else if (role === "prev-prev") {
+            el.style.setProperty("--tx", "-250%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0.2");
+            el.style.zIndex = "0";
+        } else if (role === "prev") {
+            el.style.setProperty("--tx", "-150%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0.2");
+            el.style.zIndex = "1";
+        } else if (role === "next") {
+            el.style.setProperty("--tx", "50%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0.2");
+            el.style.zIndex = "1";
+        } else if (role === "next-next") {
+            el.style.setProperty("--tx", "150%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0.2");
+            el.style.zIndex = "0";
+        } else if (role === "hidden-left") {
+            el.style.setProperty("--tx", "-150%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0");
+            el.style.zIndex = "0";
+        } else if (role === "hidden-right") {
+            el.style.setProperty("--tx", "50%");
+            el.style.setProperty("--scale", "0.9");
+            el.style.setProperty("--opacity", "0");
+            el.style.zIndex = "0";
         }
 
-        // 첫 계산이 끝났다면(캐시가 있다면) 전환 때마다 재계산하지 말고 그대로 유지
-        // (첫 인터랙션 시점에 높이가 바뀌는 점프 현상 방지)
-        if (cachedFixedHeight > 0) {
-            applyFixedHeight(cachedFixedHeight);
-            return;
+        // 중앙만 드래그 가능
+        el.style.pointerEvents = role === "active" ? "auto" : "none";
+    }
+
+    function render(el, dataIndex) {
+        el.innerHTML = templates[dataIndex];
+        el.dataset.index = String(dataIndex);
+    }
+
+    // 텔레포트 함수: 순간이동 시 트랜지션 끄기
+    function teleportTo(el, role, dataIndex) {
+        // 1) 순간이동: 트랜지션 OFF
+        el.classList.add("no-transform-transition");
+        if (dataIndex !== undefined) {
+            render(el, dataIndex);
         }
+        setRole(el, role);
 
-        // 이미 측정 중이면 중복 측정 금지(visibility/class 꼬임 방지)
-        if (isMeasuringHeight) return;
-        isMeasuringHeight = true;
-
-        // 이미지 로드/폰트 렌더 등 레이아웃 변화를 고려해 2프레임 뒤 측정
+        // 2) 다음 프레임에 트랜지션 ON 복구
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                const prevVisibility = carousel.style.visibility;
-                try {
-                    // 측정 전: 이전 고정값 제거(자연 높이 기준으로 다시 max 계산)
-                    carousel.style.removeProperty('--nft-card-fixed-height');
-
-                    /**
-                     * ⚠️ 핵심 이슈
-                     * - 카드 높이는 "active 상태"에서 레이아웃(세로형/가로형)이 달라지며 결정됨
-                     * - 현재 클래스(prev/next/hidden) 상태로 측정하면, "활성화됐을 때"의 높이를 반영하지 못함
-                     * - 따라서 모든 카드를 일시적으로 active 상태로 만들어 최대 높이를 측정해야 함
-                     */
-
-                    // 측정 중 깜빡임 방지(화면에는 변화 없게)
-                    carousel.style.visibility = 'hidden';
-
-                    let maxHeight = 0;
-                    cards.forEach((card) => {
-                        const originalClassName = card.className;
-                        // 모든 카드를 "active 레이아웃"으로 강제해서 높이 측정
-                        card.classList.remove('active', 'prev', 'next', 'hidden');
-                        card.classList.add('active');
-
-                        const h = card.offsetHeight || 0;
-                        if (h > maxHeight) maxHeight = h;
-
-                        // 원복
-                        card.className = originalClassName;
-                    });
-
-                    if (maxHeight > 0) {
-                        // 캐러셀 높이 + 카드 높이를 동일하게 고정(통일)
-                        applyFixedHeight(maxHeight);
-                    }
-                } finally {
-                    // 어떤 경우에도 복구
-                    carousel.style.visibility = prevVisibility;
-                    isMeasuringHeight = false;
-                }
-            });
+            el.classList.remove("no-transform-transition");
         });
     }
 
-    // 초기 높이 동기화(초기에는 캐시가 0이므로 계산) + 리사이즈 시에는 캐시를 리셋하고 재계산
-    syncCarouselHeight();
-    window.addEventListener('resize', () => {
-        cachedFixedHeight = 0;
-        syncCarouselHeight();
-    });
+    // 현재 index 기준으로 5개 보이는 카드 + hidden 준비
+    function layoutInitial() {
+        // 보이는 5개: L2 L1 C R1 R2
+        render(slots[0], mod(currentIndex - 2, N)); 
+        setRole(slots[0], "prev-prev");
+        
+        render(slots[1], mod(currentIndex - 1, N)); 
+        setRole(slots[1], "prev");
+        
+        render(slots[2], mod(currentIndex, N)); 
+        setRole(slots[2], "active");
+        
+        render(slots[3], mod(currentIndex + 1, N)); 
+        setRole(slots[3], "next");
+        
+        render(slots[4], mod(currentIndex + 2, N)); 
+        setRole(slots[4], "next-next");
 
-    // 첫 인터랙션 전에(이미지/폰트 로드 후) 높이를 확정해 점프 방지
-    window.addEventListener('load', () => {
-        cachedFixedHeight = 0;
-        syncCarouselHeight();
-    });
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-            cachedFixedHeight = 0;
-            syncCarouselHeight();
-        });
+        // hidden 슬롯: 다음에 들어올 R2(= currentIndex + 3)를 미리 준비 (오른쪽)
+        render(slots[5], mod(currentIndex + 3, N));
+        setRole(slots[5], "hidden-right");
+        slots[5].classList.add("no-transform-transition"); // 순간 이동은 티 안 나게
+
+        // CSS 적용을 위한 강제 reflow
+        carousel.offsetHeight;
     }
-    
-    // 이미지 드래그 방지 (캐러셀 드래그 우선)
-    const images = carousel.querySelectorAll('.nft-card-image');
-    images.forEach(img => {
-        img.addEventListener('dragstart', (e) => {
-            e.preventDefault(); // 이미지 기본 드래그 방지
-            return false;
-        });
-        img.addEventListener('selectstart', (e) => {
-            e.preventDefault(); // 텍스트 선택 방지
-            return false;
-        });
-        // 이미지 로드 후 높이 재동기화
-        img.addEventListener('load', () => {
-            // 초기 계산 전(캐시 0)인 경우에만 반영
-            if (cachedFixedHeight === 0) {
-                syncCarouselHeight();
-            }
-        });
-    });
-    
-    // ✅ 화살표 버튼 이벤트
-    // - 769px 이상: 카드 밖 고정 네비(.nft-carousel-nav)만 사용
-    // - 768px 이하: 기존 상태 유지(네비 숨김)
-    const carouselNav = document.querySelector('.nft-carousel-nav');
-    const prevBtn = carouselNav ? carouselNav.querySelector('.prev-btn') : null;
-    const nextBtn = carouselNav ? carouselNav.querySelector('.next-btn') : null;
+
+    // CSS transition 시간 (styles.css가 0.45s라서 450ms)
+    const DURATION = 450;
+
+    // ----------------------------
+    // 2) NEXT (오른쪽 → 왼쪽으로 한 칸씩)
+    // ----------------------------
+    function goNext() {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
+        carousel.classList.remove("direction-prev");
+        carousel.classList.add("direction-next");
+
+        // 들어올 카드(숨김 슬롯)는 이미 "hidden-right" 상태로 준비되어 있음
+        // 이제 한 칸씩 역할 이동:
+        // L2 -> hidden-left(사라짐) - 텔레포트 필요
+        // L1 -> L2
+        // C  -> L1
+        // R1 -> C
+        // R2 -> R1
+        // hidden-right -> R2 (새로 등장)
+
+        // L2는 왼쪽 끝에서 사라지므로 텔레포트로 처리
+        teleportTo(slots[0], "hidden-left");
+        setRole(slots[1], "prev-prev");                   // L1 -> L2
+        setRole(slots[2], "prev");                        // C  -> L1
+        setRole(slots[3], "active");                      // R1 -> C
+        setRole(slots[4], "next");                        // R2 -> R1
+        slots[5].classList.remove("no-transform-transition");
+        setRole(slots[5], "next-next");                   // hidden -> R2
+
+        // 애니메이션 끝난 뒤: 슬롯 참조를 회전 + 다음 hidden 준비
+        setTimeout(() => {
+            // 회전 (역주행 안 보이게 "역할 기준"으로 재배치)
+            // 새 L2는 기존 slots[1], 새 L1은 slots[2] ... 새 R2는 slots[5]
+            const oldL2 = slots[0];
+            slots[0] = slots[1];
+            slots[1] = slots[2];
+            slots[2] = slots[3];
+            slots[3] = slots[4];
+            slots[4] = slots[5];
+            slots[5] = oldL2;
+
+            currentIndex = mod(currentIndex + 1, N);
+
+            // 이제 slots[5]를 다시 hidden-right로 보내고 "다음에 들어올 카드"를 미리 렌더
+            render(slots[5], mod(currentIndex + 3, N));
+            setRole(slots[5], "hidden-right");
+            slots[5].classList.add("no-transform-transition");
+
+            // 방향 클래스 정리
+            carousel.classList.remove("direction-next");
+            isTransitioning = false;
+        }, DURATION);
+    }
+
+    // ----------------------------
+    // 3) PREV (왼쪽 → 오른쪽으로 한 칸씩)
+    // ----------------------------
+    function goPrev() {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
+        carousel.classList.remove("direction-next");
+        carousel.classList.add("direction-prev");
+
+        // prev는 반대로:
+        // R2 -> hidden-right(out) - 텔레포트 필요
+        // R1 -> R2
+        // C  -> R1
+        // L1 -> C
+        // L2 -> L1
+        // hidden-left -> L2 (새로 등장)
+
+        // prev에서는 hidden 슬롯을 왼쪽에서 들어오게 준비해야 함
+        // slots[5]를 hidden-left로 재준비 (다음에 들어올 L2는 currentIndex-3)
+        teleportTo(slots[5], "hidden-left", mod(currentIndex - 3, N));
+
+        // 한 칸씩 역할 이동
+        // R2는 오른쪽 끝에서 사라지므로 텔레포트로 처리
+        teleportTo(slots[4], "hidden-right");
+        setRole(slots[3], "next-next");                  // R1 -> R2
+        setRole(slots[2], "next");                       // C  -> R1
+        setRole(slots[1], "active");                     // L1 -> C
+        setRole(slots[0], "prev");                       // L2 -> L1
+        slots[5].classList.remove("no-transform-transition");
+        setRole(slots[5], "prev-prev");                  // hidden -> L2
+
+        setTimeout(() => {
+            // 회전: 새 L2는 slots[5], 새 L1은 slots[0], 새 C는 slots[1], ...
+            const oldHidden = slots[5];
+            slots[5] = slots[4];
+            slots[4] = slots[3];
+            slots[3] = slots[2];
+            slots[2] = slots[1];
+            slots[1] = slots[0];
+            slots[0] = oldHidden;
+
+            currentIndex = mod(currentIndex - 1, N);
+
+            // 다음을 위해 hidden-right 준비 (currentIndex+3)
+            render(slots[5], mod(currentIndex + 3, N));
+            setRole(slots[5], "hidden-right");
+            slots[5].classList.add("no-transform-transition");
+
+            carousel.classList.remove("direction-prev");
+            isTransitioning = false;
+        }, DURATION);
+    }
+
+    // ----------------------------
+    // 4) 버튼 이벤트
+    // ----------------------------
+    const prevBtn = document.querySelector(".nft-carousel-nav .prev-btn");
+    const nextBtn = document.querySelector(".nft-carousel-nav .next-btn");
 
     if (prevBtn) {
-        prevBtn.addEventListener('click', (e) => {
+        prevBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!isTransitioning) goToPrev();
+            goPrev();
         });
     }
-
     if (nextBtn) {
-        nextBtn.addEventListener('click', (e) => {
+        nextBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!isTransitioning) goToNext();
+            goNext();
         });
     }
-    
-    // 카드 클릭 이벤트 완전 차단 (드래그만 허용, 버튼만 클릭 가능)
-    cards.forEach(card => {
-        // 클릭 이벤트 완전 차단 (capture phase에서 먼저 처리)
-        card.addEventListener('click', (e) => {
-            // 버튼 영역인지 확인
-            const isButtonClick = e.target.closest('.nav-btn') || 
-                                  e.target.closest('.prev-btn') || 
-                                  e.target.closest('.next-btn') ||
-                                  e.target.tagName === 'BUTTON' ||
-                                  e.target.closest('button');
-            
-            // 버튼이 아닌 경우 클릭 완전 차단
-            if (!isButtonClick) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                return false;
-            }
-        }, true); // capture phase에서 처리하여 다른 이벤트보다 먼저 실행
-    });
-    
-    // 카드 콘텐츠 영역 클릭 차단
-    const cardContents = carousel.querySelectorAll('.nft-card-content');
-    cardContents.forEach(content => {
-        content.addEventListener('click', (e) => {
-            const isButtonClick = e.target.closest('.nav-btn') || 
-                                  e.target.closest('.prev-btn') || 
-                                  e.target.closest('.next-btn') ||
-                                  e.target.tagName === 'BUTTON' ||
-                                  e.target.closest('button');
-            
-            if (!isButtonClick) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                return false;
-            }
-        }, true);
-    });
-    
-    // 드래그 이벤트 (CodePen 스타일)
-    carousel.addEventListener('mousedown', handleDragStart);
-    carousel.addEventListener('touchstart', handleDragStart, { passive: false });
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('touchmove', handleDragMove, { passive: false });
-    document.addEventListener('mouseup', handleDragEnd);
-    document.addEventListener('touchend', handleDragEnd);
-    
-    function handleDragStart(e) {
-        if (isTransitioning) return;
-        
-        // 버튼 클릭 시 드래그 시작하지 않음
-        const target = e.target;
-        if (target.closest('.nav-btn') || target.closest('.prev-btn') || target.closest('.next-btn')) {
-            return;
-        }
-        
-        // 드래그 시작 플래그 설정
-        isDragging = true;
-        startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        currentX = startX; // ★ 클릭 오판정 방지
-        hasMoved = false; // ★ 드래그 여부 리셋
-        carousel.style.cursor = 'grabbing';
-        carousel.style.userSelect = 'none';
-    }
-    
-    function handleDragMove(e) {
-        if (!isDragging) return;
-        const isTouch = e.type.includes('touch');
-        const x = isTouch ? e.touches[0].clientX : e.clientX;
-        const y = isTouch ? e.touches[0].clientY : e.clientY;
-        const dx = x - startX;
-        const dy = y - startY;
 
-        // ✅ 모바일에서 카드 위 세로 스크롤이 막히는 문제 해결:
-        // 세로 의도가 더 우세하면 드래그를 취소하고 기본 스크롤을 허용
-        if (isTouch && Math.abs(dy) > Math.abs(dx) * 1.2 && Math.abs(dy) > 6) {
-            isDragging = false;
-            hasMoved = false;
-            carousel.style.cursor = '';
-            carousel.style.userSelect = '';
-            return;
-        }
+    // ----------------------------
+    // 5) 드래그 (영상 같은 방향)
+    //    오른쪽으로 드래그 => 이전(goPrev)
+    //    왼쪽으로 드래그   => 다음(goNext)
+    // ----------------------------
+    let dragging = false;
+    let startX = 0;
+    let curX = 0;
+    const TH = 60;
 
-        // 가로 드래그 의도일 때만 기본 동작(스크롤) 억제
-        if (isTouch && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
-        e.preventDefault();
-        }
-        
-        currentX = x;
-        dragOffset = currentX - startX;
-        
-        // ★ 진짜 드래그일 때만 true
-        if (Math.abs(currentX - startX) > 1) {
-            hasMoved = true;
-        }
-        
-        // 드래그 중에는 시각적 피드백만 제공 (실제 카드 이동은 하지 않음)
-        // 버튼 클릭과 동일한 모션을 위해 드래그 종료 시에만 카드 이동
-    }
-    
-    function handleDragEnd(e) {
-        if (!isDragging) {
-            // 드래그가 시작되지 않았으면 아무 동작도 하지 않음
-            return;
-        }
-        
-        const diffX = currentX - startX;
-        const wasActualDrag = hasMoved && Math.abs(diffX) > dragThreshold; // ★ 실제 드래그인지 확인
-        
-        isDragging = false;
-        hasMoved = false; // ★ 리셋
-        carousel.style.cursor = '';
-        carousel.style.userSelect = '';
-        
-        // 실제 드래그가 발생한 경우에만 카드 이동 (버튼 클릭과 동일한 모션)
-        if (wasActualDrag) {
-            if (diffX > 0) {
-                // 우에서 좌로 드래그 = 이전 (왼쪽으로)
-                goToPrev();
-            } else {
-                // 좌에서 우로 드래그 = 다음 (오른쪽으로)
-                goToNext();
-            }
-        }
-        // 드래그가 아닌 단순 클릭이면 아무 동작도 하지 않음 (카드 이동 없음)
-        
-        startX = 0;
-        currentX = 0;
-        dragOffset = 0;
-    }
-    
-    function goToPrev() {
-        if (isTransitioning) return;
-        isTransitioning = true;
-        currentIndex = (currentIndex - 1 + cards.length) % cards.length;
-        updateCarousel();
-        
-        // 전환 완료 후 플래그 해제
-        setTimeout(() => {
-            isTransitioning = false;
-        }, 450); // transition 시간과 동일
-    }
-    
-    function goToNext() {
-        if (isTransitioning) return;
-        isTransitioning = true;
-        currentIndex = (currentIndex + 1) % cards.length;
-        updateCarousel();
-        
-        // 전환 완료 후 플래그 해제
-        setTimeout(() => {
-            isTransitioning = false;
-        }, 450); // transition 시간과 동일
-    }
-    
-    function updateCarousel() {
-        const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
-        const nextIndex = (currentIndex + 1) % cards.length;
-        
-        cards.forEach((card, index) => {
-            card.classList.remove('active', 'prev', 'next', 'hidden');
-            
-            if (index === currentIndex) {
-                // 활성 카드 - 중앙
-                card.classList.add('active');
-            } else if (index === prevIndex) {
-                // 이전 카드 - 왼쪽
-                card.classList.add('prev');
-            } else if (index === nextIndex) {
-                // 다음 카드 - 오른쪽
-                card.classList.add('next');
-            } else {
-                // 나머지 카드 - 숨김
-                card.classList.add('hidden');
-            }
-        });
+    const getX = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
 
-        // 클래스 변경 후 높이 동기화
-        syncCarouselHeight();
+    function dragStart(e) {
+        if (isTransitioning) return;
+        if (e.target.closest(".prev-btn") || e.target.closest(".next-btn")) return;
+        dragging = true;
+        startX = getX(e);
+        curX = startX;
     }
+    function dragMove(e) {
+        if (!dragging) return;
+        curX = getX(e);
+    }
+    function dragEnd() {
+        if (!dragging) return;
+        dragging = false;
+
+        const diff = curX - startX;
+        if (Math.abs(diff) >= TH) {
+            // 왼쪽으로 드래그(음수) = 다음(Next, 오→왼 이동)
+            // 오른쪽으로 드래그(양수) = 이전(Prev, 왼→오 이동)
+            if (diff < 0) goNext();  // 왼쪽 드래그 = 다음
+            else goPrev();           // 오른쪽 드래그 = 이전
+        }
+    }
+
+    carousel.addEventListener("mousedown", dragStart);
+    carousel.addEventListener("touchstart", dragStart, { passive: true });
+    document.addEventListener("mousemove", dragMove);
+    document.addEventListener("touchmove", dragMove, { passive: true });
+    document.addEventListener("mouseup", dragEnd);
+    document.addEventListener("touchend", dragEnd);
+
+    // 시작
+    layoutInitial();
 }
 
 // NFT 레벨 페이지네이션 기능
