@@ -70,6 +70,26 @@ function unlockPageScroll() {
     document.body.style.overflow = '';
 }
 
+// 슬로건을 지나쳤는지 확인하는 헬퍼 함수 (전역에서 사용)
+function isPastSloganSection() {
+    const sloganSlide = document.querySelector('#slogan');
+    const structureSection = document.querySelector('.structure-section');
+    if (!sloganSlide || !structureSection) return false;
+    
+    const sloganRect = sloganSlide.getBoundingClientRect();
+    const structureRect = structureSection.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const isMobile = window.innerHeight <= 768;
+    
+    // 슬로건이 뷰포트를 완전히 지나갔거나, 스트럭처가 뷰포트에 보이면 지나친 것으로 간주
+    // 모바일에서는 더 관대하게 (뷰포트의 30% 지점, 또는 스트럭처가 뷰포트 하단 80% 이내에 보이면)
+    const threshold = isMobile ? viewportHeight * 0.3 : viewportHeight * 0.1;
+    const structureThreshold = isMobile ? viewportHeight * 0.8 : viewportHeight;
+    
+    // 슬로건이 뷰포트를 지나갔거나, 스트럭처가 뷰포트에 보이면 지나친 것으로 간주
+    return sloganRect.bottom <= threshold || structureRect.top < structureThreshold;
+}
+
 function syncHvSwiperMousewheelWithPageScroll() {
     // ✅ Swiper(히어로~비전) ↔ 페이지 스크롤(Structure 이후) 충돌 방지
     // - Swiper 구간에서는 페이지 스크롤을 락하고 Swiper 입력을 활성
@@ -78,8 +98,17 @@ function syncHvSwiperMousewheelWithPageScroll() {
     const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
     const idx = hvSwiper.activeIndex ?? 0;
 
+    // ✅ 모바일에서 슬로건 섹션을 지나쳤는지 확인
+    const isPastSlogan = isPastSloganSection();
+    
+    // 슬로건을 지나쳤으면 무조건 스크롤 허용
+    if (isPastSlogan) {
+        hvCanScrollToStructure = true;
+    }
+
     // 마지막 슬라이드가 아니면 항상 Swiper 구간(페이지 스크롤 락)
-    const shouldLockPage = idx < last || (idx === last && !hvCanScrollToStructure);
+    // 단, 슬로건을 지나쳤으면 무조건 스크롤 허용
+    const shouldLockPage = !isPastSlogan && (idx < last || (idx === last && !hvCanScrollToStructure));
 
     if (shouldLockPage) lockPageScrollAtTop();
     else unlockPageScroll();
@@ -230,10 +259,19 @@ function initHvPagerSwiper() {
             touchStartTime = performance.now();
         }
     };
+
     const onPagerTouchMove = (e) => {
         if (!hvSwiper || touchStartY === null) return;
         const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
         if (hvSwiper.activeIndex !== last) return;
+        
+        // ✅ 슬로건을 이미 지나쳤으면 스크롤 허용 (모바일에서 중요)
+        if (isPastSloganSection()) {
+            hvCanScrollToStructure = true;
+            syncHvSwiperMousewheelWithPageScroll();
+            return; // preventDefault 호출하지 않고 자연 스크롤 허용
+        }
+        
         const now = performance.now();
         
         // ✅ 슬로건 도착 직후: 관성으로 구조까지 새는 이벤트를 잠깐 차단
@@ -256,17 +294,11 @@ function initHvPagerSwiper() {
         // ✅ 아래로 스와이프 (구조로 내려가기)
         if (dy > 0) {
             // 이미 구조로 내려가도록 허용된 짧은 윈도우면 통과(자연 스크롤)
-            if (now < hvAllowDownToStructureUntil) {
-                // 스크롤 허용 상태 확인 및 해제
-                if (!hvCanScrollToStructure) {
-                    hvCanScrollToStructure = true;
-                    unlockPageScroll();
-                    syncHvSwiperMousewheelWithPageScroll();
-                }
-                return; // preventDefault 호출하지 않음 (자연 스크롤 허용)
-            }
+            if (now < hvAllowDownToStructureUntil) return;
             
-            // 임계치 체크 전에 누적값 계산
+            e.preventDefault();
+            e.stopPropagation();
+            
             if (!hvSloganDownAccAt || (now - hvSloganDownAccAt) > HV_SLOGAN_DOWN_ACC_WINDOW_MS) {
                 hvSloganDownAcc = 0;
             }
@@ -274,10 +306,11 @@ function initHvPagerSwiper() {
             // 터치 거리를 deltaY와 유사하게 정규화 (모바일은 더 큰 값이 나올 수 있음)
             hvSloganDownAcc += Math.abs(dy) * 0.5; // 휠 이벤트와 비슷한 스케일로 조정
             
-            // 임계치 미달 시에만 preventDefault (스크롤 차단)
-            if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
-                e.preventDefault();
-                e.stopPropagation();
+            // ✅ 모바일에서는 더 관대하게 처리 (임계치를 낮춤)
+            const isMobile = window.innerHeight <= 768;
+            const mobileThreshold = isMobile ? HV_SLOGAN_DOWN_ACC_THRESHOLD * 0.6 : HV_SLOGAN_DOWN_ACC_THRESHOLD;
+            
+            if (hvSloganDownAcc < mobileThreshold) {
                 return; // ✅ 계속 슬로건에 "락"
             }
             
@@ -287,24 +320,10 @@ function initHvPagerSwiper() {
             
             // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
             hvCanScrollToStructure = true;
-            // 모바일: 즉시 스크롤 해제 (다음 터치 이벤트에서 자연 스크롤 가능하도록)
-            unlockPageScroll();
             syncHvSwiperMousewheelWithPageScroll();
-            // preventDefault 호출하지 않음 (자연 스크롤 허용)
         }
     };
-    const onPagerTouchEnd = (e) => {
-        // ✅ 모바일: touchend 시에도 스크롤 상태 확인 및 해제
-        if (hvCanScrollToStructure) {
-            // 스크롤이 허용된 상태면 확실히 해제
-            unlockPageScroll();
-            // 추가 확인: 다음 프레임에도 스크롤이 해제되어 있는지 확인
-            requestAnimationFrame(() => {
-                if (hvCanScrollToStructure) {
-                    unlockPageScroll();
-                }
-            });
-        }
+    const onPagerTouchEnd = () => {
         touchStartY = null;
         touchStartTime = null;
     };
@@ -353,9 +372,32 @@ function initHvPagerSwiper() {
 
     // 페이지 스크롤 상태에 따라 Swiper/페이지 락 동기화
     window.addEventListener('scroll', () => {
+        const structureSection = document.querySelector('.structure-section');
+        const scrollY = window.pageYOffset || 0;
+        
+        // ✅ 모바일에서 슬로건 섹션을 지나쳤는지 확인 (헬퍼 함수 사용)
+        if (isPastSloganSection()) {
+            hvCanScrollToStructure = true;
+        }
+        
+        // ✅ 구조 섹션이 뷰포트에 보이면 스크롤 허용 유지
+        if (structureSection) {
+            const structureRect = structureSection.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            
+            // 구조 섹션이 뷰포트 상단에 도달하거나 지나갔으면 스크롤 허용 유지
+            // 모바일에서는 더 관대하게 적용 (뷰포트의 80% 지점)
+            const isMobile = window.innerHeight <= 768;
+            const threshold = isMobile ? viewportHeight * 0.8 : viewportHeight * 0.5;
+            
+            if (structureRect.top <= threshold) {
+                hvCanScrollToStructure = true;
+            }
+        }
+        
         // ✅ Structure에서 백스크롤로 다시 탑에 도달하면, 슬로건을 다시 "락" 상태로 되돌려
         //   비전2 → 슬로건 순으로 페이징이 정상 동작하게 유지
-        if ((window.pageYOffset || 0) <= 1 && hvCanScrollToStructure) {
+        if (scrollY <= 1 && hvCanScrollToStructure) {
             hvCanScrollToStructure = false;
         }
         syncHvSwiperMousewheelWithPageScroll();
