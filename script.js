@@ -256,11 +256,17 @@ function initHvPagerSwiper() {
         // ✅ 아래로 스와이프 (구조로 내려가기)
         if (dy > 0) {
             // 이미 구조로 내려가도록 허용된 짧은 윈도우면 통과(자연 스크롤)
-            if (now < hvAllowDownToStructureUntil) return;
+            if (now < hvAllowDownToStructureUntil) {
+                // 스크롤 허용 상태 확인 및 해제
+                if (!hvCanScrollToStructure) {
+                    hvCanScrollToStructure = true;
+                    unlockPageScroll();
+                    syncHvSwiperMousewheelWithPageScroll();
+                }
+                return; // preventDefault 호출하지 않음 (자연 스크롤 허용)
+            }
             
-            e.preventDefault();
-            e.stopPropagation();
-            
+            // 임계치 체크 전에 누적값 계산
             if (!hvSloganDownAccAt || (now - hvSloganDownAccAt) > HV_SLOGAN_DOWN_ACC_WINDOW_MS) {
                 hvSloganDownAcc = 0;
             }
@@ -268,7 +274,10 @@ function initHvPagerSwiper() {
             // 터치 거리를 deltaY와 유사하게 정규화 (모바일은 더 큰 값이 나올 수 있음)
             hvSloganDownAcc += Math.abs(dy) * 0.5; // 휠 이벤트와 비슷한 스케일로 조정
             
+            // 임계치 미달 시에만 preventDefault (스크롤 차단)
             if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
+                e.preventDefault();
+                e.stopPropagation();
                 return; // ✅ 계속 슬로건에 "락"
             }
             
@@ -278,10 +287,24 @@ function initHvPagerSwiper() {
             
             // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
             hvCanScrollToStructure = true;
+            // 모바일: 즉시 스크롤 해제 (다음 터치 이벤트에서 자연 스크롤 가능하도록)
+            unlockPageScroll();
             syncHvSwiperMousewheelWithPageScroll();
+            // preventDefault 호출하지 않음 (자연 스크롤 허용)
         }
     };
-    const onPagerTouchEnd = () => {
+    const onPagerTouchEnd = (e) => {
+        // ✅ 모바일: touchend 시에도 스크롤 상태 확인 및 해제
+        if (hvCanScrollToStructure) {
+            // 스크롤이 허용된 상태면 확실히 해제
+            unlockPageScroll();
+            // 추가 확인: 다음 프레임에도 스크롤이 해제되어 있는지 확인
+            requestAnimationFrame(() => {
+                if (hvCanScrollToStructure) {
+                    unlockPageScroll();
+                }
+            });
+        }
         touchStartY = null;
         touchStartTime = null;
     };
