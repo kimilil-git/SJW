@@ -39,6 +39,16 @@ body {
     background: rgba(0, 0, 0, 1);
 }
 
+/* ✅ visualViewport 기반 CSS 변수 기본값(구형 브라우저 안전장치) */
+:root {
+    --vv-top: 0px;
+    --vv-bottom: 0px;
+    --vvh: 100vh;
+    /* ✅ 주소창/툴바가 커졌을 때의 최대값(안전 여백 유지용) */
+    --vv-top-max: 0px;
+    --vv-bottom-max: 0px;
+}
+
 /* ✅ 한글 영역: 화면 축소로 인한 자동 줄바꿈이 단어절 기준으로 되도록 */
 html[lang="ko"] body {
     word-break: keep-all;
@@ -55,6 +65,9 @@ html[lang="ko"] body {
     max-width: 90vw;
     z-index: 1000;
     pointer-events: none;
+    /* ✅ 렌더링 최적화 및 독립적인 레이어로 격리 (body의 position/overflow 변경에 영향 안 받음) */
+    will-change: transform;
+    isolation: isolate;
 }
 
 .gnb-container {
@@ -297,20 +310,25 @@ html[lang="ko"] body {
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 1; /* 같은 .gnb 컨텍스트에서 헤더(.gnb-container)보다 아래 */
+    /* ✅ (중요) 로고/닫기 버튼은 .gnb-container(z-index:2)에서 보여야 하므로
+       오버레이는 컨테이너보다 낮은 z-index를 사용한다.
+       .gnb 자체가 z-index로 페이지(hv-pager 등)보다 위에 있으니, 내부에서는 0~1이면 충분 */
+    z-index: 1;
     background: rgba(4, 6, 62, 1); /* #04063E */
     flex-direction: column;
     align-items: center;
-    padding: 8rem 1.5rem 4rem; /* 상단(로고 영역) 여백 포함 */
+    justify-content: flex-start; /* ✅ 상단부터 배치 시작 */
+    padding: clamp(6rem, 15vh, 10rem) 1.5rem clamp(2rem, 5vh, 4rem); /* ✅ 상단 padding으로 GNB 영역 확보 */
     /* 메뉴 활성화 시에도 스크롤 불가(오버레이 내 스크롤 차단) */
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: none;
-    /* 디졸브(페이드) 기본 상태: 숨김 */
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 240ms ease, visibility 0s linear 240ms;
+    /* ✅ iOS 깜빡임 방지:
+       - 오버레이(배경)를 opacity로 디졸브하면, 투명 프레임에서 hv-pager/비전이 비치며 "깜빡임"이 발생한다.
+       - 따라서 오버레이는 항상 불투명 배경을 유지하고, 표시/숨김은 hidden/display로만 제어한다. */
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .gnb-mobile-menu-items {
@@ -318,11 +336,13 @@ html[lang="ko"] body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: clamp(1.5rem, 4vh, 2.5rem); /* ✅ 화면 높이에 따라 간격 자동 조정 */
+    flex-grow: 1; /* ✅ 남은 공간을 차지하여 중앙 배치 */
+    justify-content: center; /* ✅ 메뉴 아이템들을 세로 중앙 정렬 */
 }
 
 .gnb-mobile-menu .gnb-menu-item {
-    font-size: clamp(2rem, 6vw, 4rem);
+    font-size: clamp(2.5rem, 7vw, 4.5rem); /* 폰트 크기 증가 */
     line-height: 1.1;
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 1);
@@ -332,12 +352,13 @@ html[lang="ko"] body {
 }
 
 .gnb-mobile-issue-btn {
-    margin-top: 2.5rem;
-    width: min(15rem, 90vw);
+    margin-top: auto; /* ✅ 하단으로 밀기 */
+    margin-bottom: clamp(2rem, 3vh, 3rem); /* ✅ 언어 선택과의 간격 */
+    width: min(18rem, 90vw); /* 버튼 너비 증가 */
     background: rgba(73, 211, 255, 1);
     color: rgba(4, 6, 62, 1);
-    font-size: clamp(1.75rem, 4.5vw, 2.5rem);
-    line-height: 1.2;
+    font-size: clamp(1.125rem, 4.5vw, 1.5rem);
+    line-height: 1.4;
     letter-spacing: -0.02em;
     padding: 1.25rem 2rem;
     border: none;
@@ -348,15 +369,30 @@ html[lang="ko"] body {
 }
 
 .gnb-mobile-lang {
-    margin-top: auto;
     display: flex;
-    gap: 2.5rem;
-    align-items: flex-end;
+    gap: 3rem; /* 언어 간격 증가 */
+    align-items: center;
     justify-content: center;
 }
 
 .gnb-mobile-lang .gnb-lang {
-    font-size: 1.5rem;
+    font-size: 1.75rem; /* 폰트 크기 증가 */
+}
+
+/* ✅ 모바일 메뉴 클릭 이동 시 "간헐적 깜빡임" 방지용 커버
+   - iOS에서 body fixed 해제/scrollTo 순간에 HV(비전/슬로건)가 1프레임 비치는 케이스가 있어
+     이동 중에만 네이비 커버를 잠깐 덮어준다. */
+#mobile-nav-cover {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 62, 1); /* #04063E */
+    z-index: 9000; /* hv-pager(1) 위, gnb(모바일 오픈 시 10000) 아래 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms linear;
+}
+#mobile-nav-cover.is-active {
+    opacity: 1;
 }
 
 /* 모바일 하단 플로팅 발급 버튼 (기본: 숨김, 모바일에서만 노출) */
@@ -366,7 +402,7 @@ html[lang="ko"] body {
     left: 50%;
     /* 디졸브/슬라이드 아웃을 위해 Y만 변수로 제어 */
     --mobile-issue-btn-y: 0px;
-    transform: translateX(-50%) translateY(var(--mobile-issue-btn-y));
+    transform: translateX(-50%) translateY(var(--mobile-issue-btn-y)) translate3d(0, 0, 0);
     bottom: 1.25rem;
     z-index: 1200;
     background: rgba(73, 211, 255, 1);
@@ -382,7 +418,12 @@ html[lang="ko"] body {
     font-weight: 700;
     white-space: nowrap;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
-    transition: opacity 220ms ease, transform 220ms ease;
+    /* ✅ 주소창 전환 시 떨림 방지: GPU 레이어 분리 */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity;
+    /* ✅ 주소창 전환 시 떨림 방지: transition 최소화 */
+    transition: opacity 220ms ease;
     opacity: 1;
 }
 
@@ -396,7 +437,9 @@ html[lang="ko"] body {
 /* iOS 하단 안전영역 대응 */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .mobile-issue-btn {
-        bottom: calc(1.25rem + env(safe-area-inset-bottom));
+        /* ✅ 하단 툴바(주소창)로 가려지는 현상 방지:
+           env(safe-area-inset-bottom)과 visualViewport 기반 --vv-bottom 중 더 큰 값을 사용 */
+        bottom: calc(1.25rem + max(env(safe-area-inset-bottom, 0px), var(--vv-bottom-max, 0px)));
     }
 }
 
@@ -437,11 +480,39 @@ html[lang="ko"] body {
 
 @media (max-width: 768px) {
     .gnb {
-        top: 1rem;
+        /* ✅ 기본값: 고정된 안정적인 위치 (HV 구간용) */
+        top: calc(1rem + env(safe-area-inset-top, 0px));
         left: 20px;
-        transform: none;
+        /* ✅ 중요(iOS): transform이 걸린 부모 아래의 position:fixed 자식은 viewport 기준이 아니라
+           부모 기준으로 고정되는 케이스가 있어, 모바일 메뉴 오버레이가 화면을 다 못 덮는 문제가 생김.
+           따라서 모바일에서는 gnb 자체에는 transform을 걸지 않는다. */
+        transform: none !important;
         width: calc(100vw - 40px); /* 좌우 마진 20px */
         max-width: none;
+        /* ✅ 모바일에서도 독립적인 레이어로 격리 (body의 position/overflow 변경에 영향 안 받음) */
+        will-change: top;
+        isolation: isolate;
+        /* ✅ 레이어 안정화: 하드웨어 가속 활용 */
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        /* ✅ transition 제거 (주소창 전환 시 떨림 방지) */
+        transition: none !important;
+    }
+    
+    /* ✅ unlock 후(Structure 스크롤 구간)에서만 visualViewport 기반 동적 조정 적용 */
+    body.hv-scroll-unlocked .gnb {
+        top: calc(1rem + max(env(safe-area-inset-top, 0px), var(--vv-top-max, 0px)));
+        /* ✅ unlock 후에도 transform 유지 (GPU 레이어 분리 유지) */
+        transform: translate3d(0, 0, 0);
+        /* ✅ transition 유지 제거 */
+        transition: none !important;
+    }
+
+    /* ✅ GPU 레이어 분리(대체): gnb 자체가 아니라 컨테이너를 레이어로 올림 (오버레이 fixed 깨짐 방지) */
+    .gnb-container {
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
     }
     
     .gnb-main {
@@ -512,7 +583,7 @@ html[lang="ko"] body {
     /* 모바일 메뉴 오픈 시: 로고/아이콘 위치는 그대로 유지 */
     .gnb.is-menu-open {
         pointer-events: auto;
-        z-index: 1200; /* 오버레이보다 위에 로고/닫기 노출 */
+        z-index: 10000; /* ✅ 모바일 메뉴(9999)보다 위에 로고/닫기 노출 */
     }
 
     .gnb.is-menu-open .gnb-main::before,
@@ -527,25 +598,85 @@ html[lang="ko"] body {
 
     /* 768px 이하에서만 오버레이 메뉴를 사용 */
     .gnb-mobile-menu {
-        display: flex;
+        display: none !important; /* 기본은 hidden 상태(즉시 숨김) */
+        position: fixed !important;
+        inset: 0 !important;
+        /* ✅ 로고/닫기(.gnb-container)가 항상 위에 보이도록 오버레이 z-index는 낮게 유지 */
+        z-index: 1 !important;
+        background: rgba(4, 6, 62, 1) !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: clamp(6rem, 15vh, 10rem) 1.5rem clamp(2rem, 5vh, 4rem) !important;
+        overflow: hidden !important;
+        overscroll-behavior: none !important;
+        touch-action: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
 
-    /* 기본 상태는 비활성(숨김)
-       - hidden은 UA stylesheet로 display:none이 걸리므로, 모바일에서는 display:flex로 강제 유지
-       - 실제 숨김은 opacity/visibility로 처리해서 디졸브 애니메이션을 가능하게 함 */
-    .gnb-mobile-menu[hidden] {
+    /* ✅ hidden이 제거된 순간부터 즉시 표시 (깜빡임 방지) */
+    .gnb-mobile-menu:not([hidden]) {
         display: flex !important;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
     }
 
-    /* 메뉴 활성화 시(디졸브 인) */
-    .gnb.is-menu-open .gnb-mobile-menu {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-        transition: opacity 240ms ease, visibility 0s linear 0s;
+    /* ✅ hidden이 있으면 즉시 숨김 (디졸브 제거) */
+    .gnb-mobile-menu[hidden] {
+        display: none !important;
+    }
+    
+    /* ✅ 메뉴 내부 요소들도 확실하게 표시 */
+    .gnb-mobile-menu-items,
+    .gnb-mobile-issue-btn,
+    .gnb-mobile-lang {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    
+    /* ✅ 모바일 메뉴 내부 구조 확실하게 정의 */
+    .gnb-mobile-menu-items {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: clamp(1.5rem, 4vh, 2.5rem) !important;
+        flex-grow: 1 !important;
+        justify-content: center !important;
+    }
+    
+    .gnb-mobile-menu .gnb-menu-item {
+        font-size: clamp(2.25rem, 7vw, 4.5rem) !important;
+        line-height: 1.1 !important;
+        letter-spacing: -0.02em !important;
+        color: rgba(255, 255, 255, 1) !important;
+        text-decoration: none !important;
+        text-transform: uppercase !important;
+        font-weight: 700 !important;
+        display: block !important;
+    }
+    
+    .gnb-mobile-issue-btn {
+        margin-top: auto !important;
+        margin-bottom: clamp(2rem, 3vh, 3rem) !important;
+        width: min(18rem, 90vw) !important;
+        background: rgba(73, 211, 255, 1) !important;
+        color: rgba(4, 6, 62, 1) !important;
+        font-size: clamp(1.75rem, 4.5vw, 1.5rem) !important;
+        display: block !important;
+    }
+    
+    .gnb-mobile-lang {
+        display: flex !important;
+        gap: 2rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .gnb-mobile-lang .gnb-lang {
+        font-size: 1.75rem !important;
+        display: inline-block !important;
     }
 }
 
@@ -557,7 +688,9 @@ html[lang="ko"] body {
 /* Hero Section */
 .hero-section {
     width: 100%;
-    height: 100vh;
+    /* ✅ iOS(주소창/툴바)에서 100vh가 실제 화면보다 커져 하단이 가려지는 문제 방지
+       - JS에서 visualViewport.height를 --vvh로 주입 */
+    height: var(--vvh, 100vh);
     position: relative;
     overflow: hidden;
 }
@@ -608,7 +741,8 @@ html[lang="ko"] body {
 
 .hero-content {
     position: absolute;
-    bottom: 80px;
+    /* ✅ 모바일 브라우저 하단 툴바에 텍스트/스크롤 버튼이 가려지지 않도록 보정 */
+    bottom: calc(80px + max(env(safe-area-inset-bottom, 0px), var(--vv-bottom-max, 0px)));
     left: 64px;
     right: 64px;
     display: flex;
@@ -766,17 +900,127 @@ html[lang="ko"] body {
    - Structure 이후는 자연 스크롤(라이브러리 개입 없음)
 ========================================================= */
 
-.hv-pager {
+/* ✅ 슬로건 전용 풀스크린 배경 차단 레이어
+   - 슬로건 슬라이드 뒤에 불투명한 배경을 깔아서 Structure를 물리적으로 가림
+   - unlock 전까지는 z-index를 높게 유지하여 모든 콘텐츠를 완전히 차단 */
+.slogan-fullscreen-blocker {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100vh;
-    /* ✅ 슬로건을 구조가 "덮으면서" 올라오도록: 페이저는 스티키로 고정 */
-    position: sticky;
-    top: 0;
-    overflow: hidden;
+    /* ✅ 슬로건 배경 이미지(vision_sjw.jpg)가 보이도록 투명하게 유지 */
+    /* - 하지만 Structure가 보이지 않도록 z-index를 vision-image-container 위, Structure 아래로 설정 */
+    background: transparent;
+    /* ✅ z-index: vision-image-container(2) 위, hv-pager 콘텐츠(10) 아래 */
+    /* - unlock 전까지는 z-index를 매우 높게 설정하여 Structure(z-index: 50)도 가림 */
+    z-index: 100;
+    pointer-events: none; /* 슬로건 텍스트 클릭 방해 안 함 */
+    /* ✅ GPU 레이어 분리 (콘텐츠 떨림 방지) */
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity;
+}
+
+/* ✅ unlock 후에는 blocker를 완전히 제거 */
+body.hv-scroll-unlocked .slogan-fullscreen-blocker {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    z-index: -1 !important;
+}
+
+/* ✅ HV 구간에서는 body의 최소 높이를 100vh로 고정하여
+   Structure가 물리적으로 뷰포트 밖에 위치하도록 강제 */
+/* ✅ 모바일에서는 이 규칙을 적용하지 않음 (visualViewport 계산에 영향을 줄 수 있음) */
+@media (min-width: 769px) {
+    body:not(.hv-scroll-unlocked) {
+        min-height: 100vh;
+        max-height: 100vh;
+        overflow: hidden !important;
+    }
+
+    body.hv-scroll-unlocked {
+        min-height: unset;
+        max-height: unset;
+        overflow: visible !important;
+    }
+}
+
+.hv-pager.swiper {
+    width: 100%;
+    /* ✅ Swiper 구간도 visualViewport 기준 높이를 사용(하단 툴바 가림 방지) */
+    height: var(--vvh, 100vh) !important;
+    /* ✅ 슬로건/비전/히어로는 항상 화면에 "고정"(스냅 유지)되어야 함
+       - 모바일에서 sticky가 깨지며 슬로건이 딸려 올라가는 문제 방지 */
+    position: fixed !important; /* Swiper 기본(.swiper{position:relative}) 오버라이드 */
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    overflow: hidden !important;
     /* ✅ 다른 섹션과 겹침 방지 */
-    z-index: 2;
-    /* ✅ 스냅/관성에서 과도한 바운스(떨림) 방지 */
+    z-index: 1;
+    /* ✅ 스냅/관성에서 과도한 바운스(떨림) 방지
+       - 단, iOS pull-to-refresh를 막을 수 있어 모바일에서는 아래에서 auto로 되돌림 */
     overscroll-behavior: contain;
+    /* ✅ GPU 레이어 분리 (콘텐츠 떨림 방지) */
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ✅ Structure~Footer 자연 스크롤 구간에서는 hv-pager(배경)가 입력을 가로채지 않도록 통과시킴
+   - fixed로 화면을 덮고 있어도, 스크롤/스와이프는 아래 컨텐츠로 전달되어야 함 */
+body.hv-scroll-unlocked .hv-pager {
+    pointer-events: none;
+}
+
+/* ✅ HV(히어로/비전/슬로건) 구간에서는 Structure~Footer 덩어리를 "절대" 보이지 않게 유지
+   - 스크롤이 미세하게 새는 환경에서도 Structure가 슬로건 밑에서 딸려 보이는 현상 방지
+   - unlock(= hv-scroll-unlocked)된 뒤에만 자연 스크롤로 덮으며 등장 */
+/* ✅ HV 구간에서는 아예 DOM 레이아웃에서 제거해야 "100vh 블랙 공백"과 딸려 올라옴이 사라짐 */
+/* ✅ 추가 방어: display:none뿐 아니라 visibility/opacity/transform으로도 완전 차단 */
+body:not(.hv-scroll-unlocked) .structure-to-footer-wrapper {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    /* ✅ transform으로 화면 밖으로 완전히 밀어냄 (Swiper 전환 중에도 절대 보이지 않게) */
+    transform: translateY(100vh) !important;
+    /* ✅ 레이어 우선순위를 hv-pager 아래로 내려서 겹쳐도 안 보이게 */
+    z-index: -1 !important;
+}
+body.hv-scroll-unlocked .structure-to-footer-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0) !important;
+    z-index: 50 !important;
+}
+
+/* ✅ iOS Safari: pull-to-refresh는 overscroll 체인이 필요함
+   - 모바일에서는 contain을 해제해서 "당겨서 새로고침"이 시작되도록 */
+@media (max-width: 768px) {
+    .hv-pager.swiper {
+        overscroll-behavior: auto;
+        overscroll-behavior-y: auto;
+        /* iOS 제스처 우선순위: 세로 팬 허용 */
+        touch-action: pan-y;
+    }
+}
+
+/* ✅ Structure~Footer 덩어리는 hv-pager(풀스크린) 아래에서 시작해서
+   자연 스크롤로 위로 올라오며 슬로건을 "덮어야" 한다. */
+/* ✅ unlock 전에는 margin-top을 더 크게 잡아서 Swiper 전환 중에도 절대 화면에 안 들어오게 */
+.structure-to-footer-wrapper {
+    /* ✅ 기본 상태: 화면 밖 훨씬 아래 (200vh) */
+    margin-top: 200vh;
+}
+/* ✅ unlock 후에는 정상 위치(100vh)로 복귀 */
+body.hv-scroll-unlocked .structure-to-footer-wrapper {
+    margin-top: var(--vvh, 100vh);
 }
 
 .hv-pager .swiper-wrapper,
@@ -865,7 +1109,52 @@ html[lang="ko"] body {
     text-align: center;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.25s ease;
+    /* ✅ hv-pager(모바일 포함)에서는 텍스트 컨테이너 마스킹(overflow hidden)을 절대 쓰지 않음 */
+    overflow: visible !important;
+    transition: opacity 0.3s ease;
+}
+
+/* ✅ vision-text-1/2(기본 규칙)에 남아있는 overflow:hidden이 모바일에서 "마스크 2중"처럼 보이는 원인
+   - hv-pager 안에서는 확실히 풀어준다 */
+.hv-pager .vision-text-1,
+.hv-pager .vision-text-2 {
+    overflow: visible;
+}
+
+/* ✅ hv-pager 안에서는 title도 container-level 마스킹 제거(라인(title-line)만 클리핑) */
+.hv-pager .vision-title-1,
+.hv-pager .vision-title-2,
+.hv-pager .vision-title-3,
+.hv-pager .vision-title-1 .text-content,
+.hv-pager .vision-title-2 .text-content,
+.hv-pager .vision-title-3 .text-content {
+    /* ✅ 모바일에서 2중 마스크처럼 보이는 현상: 상위(타이틀/텍스트컨테이너) 마스킹을 확실히 제거 */
+    overflow: visible !important;
+}
+
+/* ✅ iOS 텍스트가 '마스킹된 듯' 보이는 렌더링 완화(모바일 전용)
+   - 폰트 스무딩/레이어 힌트로 PC와 유사한 체감으로 맞춤 */
+@media (max-width: 768px) {
+    .hv-pager .vision-title-1,
+    .hv-pager .vision-title-2,
+    .hv-pager .vision-title-3 {
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+        transform: translateZ(0);
+    }
+}
+
+/* ✅ 일반 스와이프/스크롤에서는 "마스크 느낌"을 제거(라인 클리핑 해제)
+   - 메뉴 클릭 이동에서만 .hv-title-mask를 켜서 기존 모션(마스크+바텀→탑)을 유지 */
+.hv-pager .vision-title-1 .text-content .title-line,
+.hv-pager .vision-title-2 .text-content .title-line,
+.hv-pager .vision-title-3 .text-content .title-line {
+    overflow: visible !important;
+}
+.hv-pager.hv-title-mask .vision-title-1 .text-content .title-line,
+.hv-pager.hv-title-mask .vision-title-2 .text-content .title-line,
+.hv-pager.hv-title-mask .vision-title-3 .text-content .title-line {
+    overflow: hidden !important;
 }
 
 .hv-pager .vision-text-1.active,
@@ -908,7 +1197,8 @@ html[lang="ko"] body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;
+    /* ✅ iOS(주소창/툴바)에서 100vh가 실제 화면보다 커져 하단이 가려지는 문제 방지 */
+    height: var(--vvh, 100vh);
     z-index: 1;
     overflow: hidden;
     opacity: 0;
@@ -973,7 +1263,8 @@ html[lang="ko"] body {
     bottom: 0vh;
     left: 0;
     width: 100%;
-    height: 100vh;
+    /* ✅ iOS(주소창/툴바)에서 100vh가 실제 화면보다 커져 하단이 가려지는 문제 방지 */
+    height: var(--vvh, 100vh);
     z-index: 2;
     overflow: hidden;
     /* ✅ 66~100%에서 비디오→이미지 디졸브를 위해 기본은 숨김 */
@@ -1123,6 +1414,7 @@ html[lang="ko"] body {
 .vision-title-2 .text-content .title-line .line-text,
 .vision-title-3 .text-content .title-line .line-text {
     display: block;
+    /* ✅ PC와 동일한 모션 값으로 통일(모바일도 동일) */
     transform: translateY(100px);
     opacity: 0;
     transition: all 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
@@ -1166,8 +1458,18 @@ html[lang="ko"] body {
     width: 100%;
     background: linear-gradient(180deg, #000121 0%, #1C175D 50%, #2f2f76 75%, #311f83 100%);
     position: relative;
-    z-index: 10;
+    /* ✅ unlock 상태에서만 z-index 50 (CSS의 body.hv-scroll-unlocked 규칙에서 오버라이드됨) */
+    /* ✅ 기본 상태에서는 z-index -1로 hv-pager 아래로 내려감 */
+    z-index: -1;
+    /* ✅ GPU 레이어 분리 (콘텐츠 떨림 방지) */
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, opacity;
 }
+
+/* (정리) 슬로건 → Structure 전환은 "리빌 오버레이" 방식이 아니라
+   ✅ 자연 스크롤(문서 스크롤)로 Structure가 아래에서 올라와 슬로건을 덮도록 통일 */
 
 /* Structure Section */
 .structure-section {
@@ -1583,7 +1885,6 @@ html[lang="ko"] body {
     width: 100%;
     min-height: 100vh;
     background: transparent; /* 통합 배경 사용 */
-    overflow-x: hidden; /* 좌측 카드가 잘리지 않도록 */
     /* NFT 섹션 패딩은 변수로 공통/반응형 관리 */
     --nft-section-padding-top: 10vh;
     --nft-section-padding-x: 5vw;
@@ -1658,8 +1959,6 @@ html[lang="ko"] body {
 /* ✅ NFT 캐러셀 3D 회전(레퍼런스 느낌) — 769px 이상만 적용
    - 요구사항: 좌우 전환 시 3D 회전 느낌, 비활성 카드는 "뒤"에 고정(큰 위치 이동 없이)
    - 모바일(768↓)은 기존 레이아웃/동작 유지 */
-/* 3D 모드 비활성화 - 2D 모드만 사용 */
-/*
 @media (min-width: 769px) {
     .nft-carousel {
         perspective: 1200px;
@@ -1672,20 +1971,14 @@ html[lang="ko"] body {
         will-change: transform, opacity;
     }
 
-    중앙 활성 카드
+    /* 중앙 활성 카드 */
     .nft-card.active {
         transform: translate(-50%, -50%) translateZ(0) rotateY(0deg) scale(1);
         opacity: 1;
         z-index: 3;
     }
 
-    비활성 카드(뒤): 좌우 이동 최소화 + 3D 회전만으로 방향감
-    .nft-card.prev-prev {
-        transform: translate(-50%, -50%) translateZ(-200px) rotateY(35deg) scale(0.9);
-        opacity: 0.2;
-        z-index: 0;
-    }
-
+    /* 비활성 카드(뒤): 좌우 이동 최소화 + 3D 회전만으로 방향감 */
     .nft-card.prev {
         transform: translate(-50%, -50%) translateZ(-140px) rotateY(26deg) scale(0.95);
         opacity: 0.22;
@@ -1695,170 +1988,27 @@ html[lang="ko"] body {
     .nft-card.next {
         transform: translate(-50%, -50%) translateZ(-140px) rotateY(-26deg) scale(0.95);
         opacity: 0.22;
-        z-index: 1;
-    }
-
-    .nft-card.next-next {
-        transform: translate(-50%, -50%) translateZ(-200px) rotateY(-35deg) scale(0.9);
-        opacity: 0.2;
-        z-index: 0;
+        z-index: 2;
     }
 
     .nft-card.hidden {
         transform: translate(-50%, -50%) translateZ(-260px) rotateY(0deg) scale(0.9);
         opacity: 0;
         z-index: 0;
-        transition: opacity 0.55s ease, z-index 0s;
-    }
-    다음 버튼 클릭 시: hidden(중앙)에서 hidden-right(오른쪽)로 전환되는 경우 - 방지 - 3D 모드
-    .nft-carousel.direction-next .nft-card.hidden {
-        transition: opacity 0.55s ease, z-index 0s;
     }
 
-    숨김 카드 - 왼쪽에 배치 (prev로 전환될 카드, 3D)
-    .nft-card.hidden-left {
-        transform: translate(-50%, -50%) translateZ(-140px) rotateY(26deg) scale(0.95);
-        opacity: 0;
-        z-index: 0;
-        transition: opacity 0.55s ease, z-index 0s;
-    }
-
-    숨김 카드 - 오른쪽에 배치 (next로 전환될 카드, 3D)
-    .nft-card.hidden-right {
-        transform: translate(-50%, -50%) translateZ(-140px) rotateY(-26deg) scale(0.95);
-        opacity: 0;
-        z-index: 0;
-        transition: opacity 0.55s ease, z-index 0s;
-    }
-
-    좀 더 부드러운 3D 전환 - 기본
+    /* 좀 더 부드러운 3D 전환 */
     .nft-card,
     .nft-card.active,
     .nft-card.prev,
     .nft-card.next,
-    .nft-card.hidden,
-    .nft-card.hidden-left,
-    .nft-card.hidden-right {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    
-    prev-prev와 next-next는 transform transition 제거 (같은 카드가 좌우로 이동할 때 모션 방지)
-    .nft-card.prev-prev,
-    .nft-card.next-next {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    
-    이전 버튼 클릭 시: 모든 카드가 왼쪽에서 오른쪽으로 이동 (→) - 3D 모드
-    .nft-carousel.direction-prev .nft-card.prev {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-prev .nft-card.active {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-prev .nft-card.next {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-prev .nft-card.prev-prev {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-prev .nft-card.next-next {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    이전 버튼 클릭 시: 오른쪽에서 왼쪽으로 이동하는 모션 방지 - 3D 모드
-    .nft-carousel.direction-prev .nft-card.hidden-left {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-prev .nft-card.hidden-right {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    
-    다음 버튼 클릭 시: 모든 카드가 오른쪽에서 왼쪽으로 이동 (←) - 3D 모드
-    .nft-carousel.direction-next .nft-card.next {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    다음 버튼 클릭 시: prev, hidden(중앙), 또는 active(중앙)에서 next로 전환되는 경우 (왼쪽/중앙에서 오른쪽) - 방지 - 3D 모드
-    .nft-carousel.direction-next .nft-card.next.no-transform-transition {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.active {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.prev {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.next-next {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    다음 버튼 클릭 시: prev, prev-prev, hidden-left, hidden(중앙), 또는 active(중앙)에서 next-next로 전환되는 경우 (왼쪽/중앙에서 오른쪽) - 방지 - 3D 모드
-    .nft-carousel.direction-next .nft-card.next-next.no-transform-transition {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.prev-prev {
-        transition:
-            transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    다음 버튼 클릭 시: 왼쪽에서 오른쪽으로 이동하는 모션 방지 - 3D 모드
-    .nft-carousel.direction-next .nft-card.hidden-right {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.hidden-right.no-transform-transition {
-        transition:
-            opacity 0.55s ease,
-            z-index 0s;
-    }
-    .nft-carousel.direction-next .nft-card.hidden-left {
+    .nft-card.hidden {
         transition:
             transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
             opacity 0.55s ease,
             z-index 0s;
     }
 }
-*/
 
 /* NFT 카드 공통 스타일 - 기본 상태: 중앙, 90%, 완전 투명 */
 .nft-card {
@@ -1916,10 +2066,8 @@ html[lang="ko"] body {
     --nft-subtitle-size: clamp(1rem, 1.5vw, 1.5rem);
     /* prev/next 카드 노출/모션 값도 변수로 통일 (브레이크포인트별 관리) */
     --nft-side-card-scale: 0.9;
-    --nft-prev-prev-translate-x: -250%;  /* 왼쪽 2번째 카드 위치 */
-    --nft-prev-translate-x: -150%;  /* 왼쪽 1번째 카드 위치 */
-    --nft-next-translate-x: 50%;  /* 오른쪽 1번째 카드 위치 */
-    --nft-next-next-translate-x: 150%;  /* 오른쪽 2번째 카드 위치 */
+    --nft-prev-translate-x: -150%;
+    --nft-next-translate-x: 50%;
     --nft-active-content-direction: row; /* 기본(데스크탑): 좌우 */
     position: absolute;
     top: 50%;
@@ -1934,15 +2082,10 @@ html[lang="ko"] body {
     box-shadow: 
         inset 0 0 0 0.0625rem rgba(255, 255, 255, 0.2),
         0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
-    /* CSS 변수 기반 transform (슬롯 rotate 방식) */
-    --tx: 0%;
-    --scale: 0.9;
-    --opacity: 0;
-    transform: translate(-50%, -50%) translateX(var(--tx)) scale(var(--scale));
-    opacity: var(--opacity);
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
     z-index: 0;
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s;
-    will-change: transform, opacity;
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s 0.45s;
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
@@ -1985,27 +2128,12 @@ html[lang="ko"] body {
     }
 }
 
-/* CSS 변수 기반 애니메이션 제어 (슬롯 rotate 방식) */
-.nft-card.no-anim {
-    transition: none !important;
-}
-
-/* 순간이동(텔레포트) 시 트랜지션 끄기 */
-.nft-card.no-transform-transition {
-    transition: none !important;
-}
-
 /* 중앙 활성 카드 - 100% 사이즈, 완전 불투명, 최상위 레이어 */
 .nft-card.active {
-    /* 기본 transform을 유지하고 CSS 변수로 중앙 위치 설정 */
-    --tx: 0%; /* 중앙 위치 (left: 50% 기준) */
-    --scale: 1; /* 100% 사이즈 */
-    --opacity: 1; /* 완전 불투명 */
-    /* 기본 .nft-card의 transform을 명시적으로 사용 */
-    transform: translate(-50%, -50%) translateX(var(--tx)) scale(var(--scale));
-    opacity: var(--opacity);
+    transform: translate(-50%, -50%) scale(1); /* 중앙, 100% 크기 */
+    opacity: 1;
     z-index: 3; /* 최상위 레이어 */
-    /* CSS 변수로 제어되지만, active 클래스는 드래그/포인터 이벤트용으로 유지 */
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* z-index 즉시 적용 */
     pointer-events: auto; /* 드래그를 위해 pointer-events 활성화 */
     cursor: grab; /* 드래그 가능 커서 */
 }
@@ -2014,93 +2142,20 @@ html[lang="ko"] body {
     cursor: grabbing; /* 드래그 중 커서 */
 }
 
-/* 왼쪽 2번째 카드 */
-.nft-card.prev-prev {
-    transform: translate(var(--nft-prev-prev-translate-x), -50%) scale(var(--nft-side-card-scale));
-    opacity: 0.2; /* 투명도 20% */
-    z-index: 0;
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s;
-    pointer-events: none;
-}
-
-/* 왼쪽 1번째 카드 - 중앙 기준 약간 왼쪽으로만 이동 */
+/* 왼쪽 카드 - 중앙 기준 약간 왼쪽으로만 이동 */
 .nft-card.prev {
     transform: translate(var(--nft-prev-translate-x), -50%) scale(var(--nft-side-card-scale)); /* 브레이크포인트별 관리 */
     opacity: 0.2; /* 투명도 20% */
     z-index: 1; /* prev는 next보다 낮은 레이어 */
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* 기본: 위치와 투명도 모두 애니메이션 */
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* z-index 즉시 적용 */
 }
 
-/* 오른쪽 1번째 카드 - 중앙 기준 약간 오른쪽으로만 이동 */
+/* 오른쪽 카드 - 중앙 기준 약간 오른쪽으로만 이동 */
 .nft-card.next {
     transform: translate(var(--nft-next-translate-x), -50%) scale(var(--nft-side-card-scale)); /* 브레이크포인트별 관리 */
     opacity: 0.2; /* 투명도 20% */
-    z-index: 1; /* prev와 동일한 레이어 (이전 버튼 모션과 동일하게) */
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* 기본: 위치와 투명도 모두 애니메이션 */
-}
-
-/* 이전 버튼 클릭 시: 모든 카드가 왼쪽에서 오른쪽으로 이동 (→) */
-.nft-carousel.direction-prev .nft-card.prev {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* prev → active: 왼쪽에서 중앙으로 이동 */
-}
-.nft-carousel.direction-prev .nft-card.active {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* active: 중앙으로 이동하며 사이즈/투명도 변경 */
-}
-.nft-carousel.direction-prev .nft-card.next {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* active → next: 중앙에서 오른쪽으로 이동 */
-}
-.nft-carousel.direction-prev .nft-card.prev-prev {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* prev-prev → prev: 왼쪽에서 오른쪽으로 이동 */
-}
-.nft-carousel.direction-prev .nft-card.next-next {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* next → next-next: 오른쪽에서 더 오른쪽으로 이동 */
-}
-/* 이전 버튼 클릭 시: 오른쪽에서 왼쪽으로 이동하는 모션 방지 */
-.nft-carousel.direction-prev .nft-card.hidden-left {
-    transition: opacity 0.45s ease, z-index 0s; /* transform은 즉시 적용 (오른쪽에서 왼쪽 이동 방지) */
-}
-.nft-carousel.direction-prev .nft-card.hidden-right {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* hidden-right → next-next: 오른쪽에서 더 오른쪽으로 이동 */
-}
-
-/* 다음 버튼 클릭 시: 모든 카드가 오른쪽에서 왼쪽으로 이동 (←) */
-.nft-carousel.direction-next .nft-card.next {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* next → active: 오른쪽에서 중앙으로 이동 */
-}
-/* 다음 버튼 클릭 시: prev, prev-prev, hidden-left, hidden(중앙), 또는 active(중앙)에서 next로 전환되는 경우 (왼쪽/중앙에서 오른쪽) - 방지 */
-.nft-carousel.direction-next .nft-card.next.no-transform-transition {
-    transition: opacity 0.45s ease, z-index 0s; /* transform은 즉시 적용 (왼쪽/중앙에서 오른쪽 이동 방지) */
-}
-.nft-carousel.direction-next .nft-card.active {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* active: 중앙으로 이동하며 사이즈/투명도 변경 */
-}
-.nft-carousel.direction-next .nft-card.prev {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* active → prev: 중앙에서 왼쪽으로 이동 */
-}
-.nft-carousel.direction-next .nft-card.next-next {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* next-next → next: 오른쪽에서 왼쪽으로 이동 */
-}
-.nft-carousel.direction-next .nft-card.prev-prev {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* prev → prev-prev: 왼쪽에서 더 왼쪽으로 이동 */
-}
-/* 다음 버튼 클릭 시: 왼쪽에서 오른쪽으로 이동하는 모션 방지 */
-.nft-carousel.direction-next .nft-card.hidden-right {
-    transition: opacity 0.45s ease, z-index 0s; /* transform은 즉시 적용 (왼쪽에서 오른쪽 이동 방지) */
-}
-.nft-carousel.direction-next .nft-card.hidden-right.no-transform-transition {
-    transition: opacity 0.45s ease, z-index 0s; /* transform은 즉시 적용 (왼쪽에서 오른쪽 이동 방지) */
-}
-.nft-carousel.direction-next .nft-card.hidden-left {
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* hidden-left → prev-prev: 왼쪽에서 더 왼쪽으로 이동 */
-}
-
-/* 오른쪽 2번째 카드 */
-.nft-card.next-next {
-    transform: translate(var(--nft-next-next-translate-x), -50%) scale(var(--nft-side-card-scale));
-    opacity: 0.2; /* 투명도 20% */
-    z-index: 0; /* prev-prev와 동일한 레이어 */
-    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s;
-    pointer-events: none;
+    z-index: 2; /* next는 prev보다 높은 레이어 (active 바로 아래) */
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s; /* z-index 즉시 적용 */
 }
 
 /* 숨김 카드 - 중앙에 있지만 보이지 않음, 가장 낮은 레이어 */
@@ -2108,29 +2163,7 @@ html[lang="ko"] body {
     transform: translate(-50%, -50%) scale(0.9); /* 중앙 고정, 90% 크기 */
     opacity: 0; /* 완전 투명 */
     z-index: 0; /* 가장 낮은 레이어 */
-    transition: opacity 0.45s ease, z-index 0s 0.45s; /* 기본: transform은 즉시 적용, opacity만 애니메이션 */
-    pointer-events: none; /* 클릭 불가 */
-}
-/* 다음 버튼 클릭 시: hidden(중앙)에서 hidden-right(오른쪽)로 전환되는 경우 - 방지 */
-.nft-carousel.direction-next .nft-card.hidden {
-    transition: opacity 0.45s ease, z-index 0s 0.45s; /* transform은 즉시 적용 (중앙에서 오른쪽 이동 방지) */
-}
-
-/* 숨김 카드 - 왼쪽에 배치 (prev로 전환될 카드) */
-.nft-card.hidden-left {
-    transform: translate(var(--nft-prev-translate-x), -50%) scale(var(--nft-side-card-scale)); /* 왼쪽, prev와 동일한 위치 */
-    opacity: 0; /* 완전 투명 */
-    z-index: 0; /* 가장 낮은 레이어 */
-    transition: opacity 0.45s ease, z-index 0s 0.45s; /* transform은 즉시 적용, opacity만 애니메이션 */
-    pointer-events: none; /* 클릭 불가 */
-}
-
-/* 숨김 카드 - 오른쪽에 배치 (next로 전환될 카드) */
-.nft-card.hidden-right {
-    transform: translate(var(--nft-next-translate-x), -50%) scale(var(--nft-side-card-scale)); /* 오른쪽, next와 동일한 위치 */
-    opacity: 0; /* 완전 투명 */
-    z-index: 0; /* 가장 낮은 레이어 */
-    transition: opacity 0.45s ease, z-index 0s 0.45s; /* 기본: transform은 즉시 적용, opacity만 애니메이션 */
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s 0.45s; /* z-index는 transition 후 적용 */
     pointer-events: none; /* 클릭 불가 */
 }
 
@@ -2139,9 +2172,8 @@ html[lang="ko"] body {
     width: 100%;
     height: var(--nft-content-height); /* 브레이크포인트별 관리 */
     display: flex;
-    /* ✅ 추가: active가 아니어도 항상 동일한 flex 레이아웃 유지 */
-    flex-direction: var(--nft-active-content-direction, row); /* 기본값 row */
-    justify-content: var(--nft-active-content-justify, space-between); /* 기본값 space-between */
+    flex-direction: row; /* 좌우 분할 레이아웃 (기본) */
+    justify-content: space-between; /* 좌우 간격 확보 */
     align-items: var(--nft-content-align-items); /* 브레이크포인트별 관리 */
     padding: var(--nft-content-padding); /* 패딩 (변수로 관리) */
     position: relative;
@@ -2212,14 +2244,19 @@ html[lang="ko"] body {
 @media (min-width: 1025px) {
     .nft-card.active,
     .nft-card.prev,
-    .nft-card.next {
+    .nft-card.next,
+    /* ✅ 6슬롯에서 보이는 추가 비활성 카드까지 포함 */
+    .nft-card.prev-prev,
+    .nft-card.next-next {
         --nft-left-justify: center; /* 화살표 제거로 생기는 여백 체감 방지 */
     }
 
     /* ✅ 1025px 이상: prev/next도 active와 '완전 동일한 텍스트/컬럼 레이아웃' 유지
        - 레이아웃은 동일, 차이는 transform(scale/translate) + opacity만 */
     .nft-card.prev .nft-card-content,
-    .nft-card.next .nft-card-content {
+    .nft-card.next .nft-card-content,
+    .nft-card.prev-prev .nft-card-content,
+    .nft-card.next-next .nft-card-content {
         display: flex;
         flex-direction: var(--nft-active-content-direction);
         justify-content: var(--nft-active-content-justify);
@@ -2229,13 +2266,19 @@ html[lang="ko"] body {
     .nft-card.prev .nft-card-left-column,
     .nft-card.prev .nft-card-right-column,
     .nft-card.next .nft-card-left-column,
-    .nft-card.next .nft-card-right-column {
+    .nft-card.next .nft-card-right-column,
+    .nft-card.prev-prev .nft-card-left-column,
+    .nft-card.prev-prev .nft-card-right-column,
+    .nft-card.next-next .nft-card-left-column,
+    .nft-card.next-next .nft-card-right-column {
         width: var(--nft-active-col-width);
         flex: var(--nft-active-col-flex);
     }
 
     .nft-card.prev .nft-card-right-column,
-    .nft-card.next .nft-card-right-column {
+    .nft-card.next .nft-card-right-column,
+    .nft-card.prev-prev .nft-card-right-column,
+    .nft-card.next-next .nft-card-right-column {
         margin-top: var(--nft-right-col-margin-top);
         margin-bottom: var(--nft-right-col-margin-bottom);
     }
@@ -2374,6 +2417,154 @@ html[lang="ko"] body {
     overflow: hidden; /* 원형 외각을 매끄럽게 유지 */
 }
 
+/* =========================================================
+   ✅ NFT 캐러셀(6슬롯) 최종 오버라이드
+   - nft_backup/script.js의 6슬롯 로직과 1:1로 맞춘다
+   - "이동 방향으로만" 보이도록 hidden은 바깥(prev-prev/next-next)에서 대기
+   - 기존 3D/중복 규칙이 있어도 아래 규칙이 최우선으로 적용되도록 !important 사용
+   ========================================================= */
+
+.nft-card {
+    /* ✅ JS가 setRole에서 값을 주입 (기본값은 안전하게) */
+    /* ✅ slot 기반 배치(컨테이너 기준)로 변경 → 카드 겹침 방지 */
+    --slot: 0;
+    /* ✅ 슬롯 간격(step)은 "겹침이 절대 발생하지 않도록" 카드 폭 대비 넉넉하게 잡는다
+       - 83vw: 데스크탑에서 양옆 카드가 적당히 보이면서도 active와 겹치지 않게
+       - max 1320px: 큰 화면에서도 겹침 방지(카드 max 폭 기준) */
+    --slot-step: clamp(420px, 79vw, 1320px);
+    --scale: 0.9;
+    --opacity: 0;
+    transform:
+        translate(-50%, -50%)
+        translateX(calc(var(--slot) * var(--slot-step)))
+        scale(var(--scale)) !important;
+    opacity: var(--opacity) !important;
+    z-index: 0;
+    transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s !important;
+    will-change: transform, opacity;
+    pointer-events: none;
+}
+
+/* ✅ 1024px 이하(태블릿/모바일): 카드 폭이 줄어드는 만큼 step도 같이 조정하되 "겹침 금지"는 유지 */
+@media (max-width: 768px) {
+    .nft-card {
+        /* 83vw: 화면이 좁아도 L1/R1이 보이되 겹치지 않도록 */
+        --slot-step: clamp(300px, 83vw, 980px);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .nft-card {
+        --slot-step: clamp(300px, 85vw, 980px);
+    }
+}
+
+/* 순간이동(텔레포트) 시 트랜지션 끄기 */
+.nft-card.no-transform-transition {
+    transition: none !important;
+}
+
+/* 6슬롯 역할별 기본값(혹시 JS가 늦게 적용되더라도 안정적으로 보이도록) */
+.nft-card.active {
+    --slot: 0;
+    --scale: 1;
+    --opacity: 1;
+    z-index: 3;
+    pointer-events: auto;
+    cursor: grab;
+}
+.nft-card.active:active {
+    cursor: grabbing;
+}
+
+.nft-card.prev {
+    /* ✅ 양옆 카드가 "살짝" 보이도록 */
+    --slot: -1;
+    --scale: 0.9;
+    --opacity: 0.2;
+    z-index: 1;
+}
+.nft-card.next {
+    /* ✅ 양옆 카드가 "살짝" 보이도록 */
+    --slot: 1;
+    --scale: 0.9;
+    --opacity: 0.2;
+    z-index: 1;
+}
+.nft-card.prev-prev {
+    /* ✅ 2칸 바깥(덜 보이거나 거의 안 보이는 영역) */
+    --slot: -2;
+    --scale: 0.9;
+    --opacity: 0.2;
+    z-index: 0;
+}
+.nft-card.next-next {
+    /* ✅ 2칸 바깥(덜 보이거나 거의 안 보이는 영역) */
+    --slot: 2;
+    --scale: 0.9;
+    --opacity: 0.2;
+    z-index: 0;
+}
+
+/* ✅ hidden은 "바깥쪽"에서 대기(역방향 이동 방지) */
+.nft-card.hidden-left {
+    /* ✅ 숨김 카드는 2칸 바깥에서 대기 → 역방향 이동 방지 */
+    --slot: -3;
+    --scale: 0.9;
+    --opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.nft-card.hidden-right {
+    /* ✅ 숨김 카드는 2칸 바깥에서 대기 → 역방향 이동 방지 */
+    --slot: 3;
+    --scale: 0.9;
+    --opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.nft-card.hidden {
+    --slot: 0;
+    --scale: 0.9;
+    --opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ✅ 비활성 카드 레이아웃(텍스트 정렬)이 순간적으로 바뀌는 현상 방지:
+   active/prev/next/prev-prev/next-next 모두 동일 레이아웃 유지(차이는 scale/opacity만) */
+@media (min-width: 1025px) {
+    .nft-card.active,
+    .nft-card.prev,
+    .nft-card.next,
+    .nft-card.prev-prev,
+    .nft-card.next-next {
+        --nft-left-justify: center !important;
+    }
+
+    .nft-card.prev .nft-card-content,
+    .nft-card.next .nft-card-content,
+    .nft-card.prev-prev .nft-card-content,
+    .nft-card.next-next .nft-card-content {
+        display: flex !important;
+        flex-direction: var(--nft-active-content-direction) !important;
+        justify-content: var(--nft-active-content-justify) !important;
+        align-items: var(--nft-content-align-items) !important;
+    }
+
+    .nft-card.prev .nft-card-left-column,
+    .nft-card.prev .nft-card-right-column,
+    .nft-card.next .nft-card-left-column,
+    .nft-card.next .nft-card-right-column,
+    .nft-card.prev-prev .nft-card-left-column,
+    .nft-card.prev-prev .nft-card-right-column,
+    .nft-card.next-next .nft-card-left-column,
+    .nft-card.next-next .nft-card-right-column {
+        width: var(--nft-active-col-width) !important;
+        flex: var(--nft-active-col-flex) !important;
+    }
+}
+
 /* ✅ 외부/내부 공통: backdrop-filter 레이어(양쪽 버튼 동일 적용) */
 .nav-btn::before {
     content: '';
@@ -2423,7 +2614,7 @@ html[lang="ko"] body {
 @media (min-width: 769px) and (max-width: 1024px) {
     .nft-card.active {
         transform: translate(-50%, -50%) scale(0.9);
-}
+    }
 
     /* prev/next는 active 대비 동일 비율 유지(기존 0.9 * 0.9 = 0.81) */
     .nft-card {
@@ -3091,9 +3282,9 @@ html[lang="ko"] body {
 
 /* hover 가능한(마우스) 환경에서만 hover 확대 적용 → 모바일에서의 잔상/깜빡임 방지 */
 @media (hover: hover) and (pointer: fine) {
-.nft-level-indicators .indicator:hover {
-    transform: scale(1.2);
-    background: rgba(255, 255, 255, 0.4);
+    .nft-level-indicators .indicator:hover {
+        transform: scale(1.2);
+        background: rgba(255, 255, 255, 0.4);
     }
 }
 
@@ -3166,7 +3357,7 @@ html[lang="ko"] body {
         --nft-left-flex-shrink: 1;
         --nft-left-height: 100%;
     }
-    
+
     /* 1024 이하: prev/next도 active와 동일한 콘텐츠(세로형) 레이아웃 적용 */
     .nft-card.prev .nft-card-content,
     .nft-card.next .nft-card-content {
@@ -3183,7 +3374,7 @@ html[lang="ko"] body {
         width: var(--nft-active-col-width);
         flex: var(--nft-active-col-flex);
     }
-    
+
     .nft-card.prev .nft-card-right-column,
     .nft-card.next .nft-card-right-column {
         margin-top: var(--nft-right-col-margin-top);
@@ -3279,19 +3470,15 @@ html[lang="ko"] body {
         --nft-text-align: left;
         --nft-text-group-align: flex-start;
         /* 768 이하에서도 prev/next가 살짝 보이도록 */
-        --nft-prev-prev-translate-x: -250%;
         --nft-prev-translate-x: -150%;
         --nft-next-translate-x: 50%;
-        --nft-next-next-translate-x: 150%;
     }
-    
+
     /* 768 이하: active/prev/next 모두 동일한 세로형 레이아웃 + 사이즈 기준
        (prev/next는 transform scale + opacity로만 차이) */
     .nft-card.active,
-    .nft-card.prev-prev,
     .nft-card.prev,
-    .nft-card.next,
-    .nft-card.next-next {
+    .nft-card.next {
         /* 768 이하: 패딩을 %로 관리 (가로폭 기준으로 상하/좌우 모두 함께 증감) */
         --nft-content-padding: 2% 8% 8% 8%;
         /* 768 이하: 이미지-텍스트 사이 gap(빨간 박스 영역)만 따로 제어 */
@@ -3340,7 +3527,7 @@ html[lang="ko"] body {
         justify-content: var(--nft-active-content-justify);
         align-items: var(--nft-content-align-items);
     }
-    
+
     .nft-card.prev .nft-card-left-column,
     .nft-card.prev .nft-card-right-column,
     .nft-card.next .nft-card-left-column,
@@ -3348,7 +3535,7 @@ html[lang="ko"] body {
         width: var(--nft-active-col-width);
         flex: var(--nft-active-col-flex);
     }
-    
+
     .nft-card.prev .nft-card-right-column,
     .nft-card.next .nft-card-right-column {
         margin-top: var(--nft-right-col-margin-top);
@@ -4110,7 +4297,8 @@ html[lang="ko"] body {
     .hero-content {
         left: 20px;
         right: 20px;
-        bottom: 40px;
+        /* ✅ 모바일에서는 기본 40px + 하단 안전영역/툴바 보정 */
+        bottom: calc(40px + max(env(safe-area-inset-bottom, 0px), var(--vv-bottom-max, 0px)));
         flex-direction: column;
         align-items: flex-start;
         gap: 40px;

@@ -4,6 +4,90 @@ if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
 }
 
+// ✅ iOS Safari/모바일 브라우저 주소창(툴바) 높이 변화 대응
+// - Estrela Studio 방식: 주소창을 확장된 상태로 유지 (축소 방지)
+// - 초기 window.innerHeight를 고정값으로 사용
+(function syncVisualViewportVars() {
+    const root = document.documentElement;
+    let rafId = 0;
+    
+    // ✅ 초기 높이 고정 (주소창 확장 상태)
+    const initialHeight = window.innerHeight;
+    let maxTop = 0;
+    let maxBottom = 0;
+
+    const update = () => {
+        rafId = 0;
+        const vv = window.visualViewport;
+        if (!vv) {
+            // visualViewport 미지원 브라우저: 초기 높이 고정
+            root.style.setProperty('--vvh', `${initialHeight}px`);
+            return;
+        }
+
+        // ✅ 주소창 확장 상태 유지 (Estrela Studio 방식)
+        root.style.setProperty('--vvh', `${initialHeight}px`);
+
+        // ✅ HV 구간(히어로~슬로건)에서는 visualViewport 업데이트 중단
+        // - 스크롤/백스크롤 시 히어로 콘텐츠 위치가 틀어지는 문제 방지
+        // - unlock 후(Structure 이후)에만 업데이트
+        const isLocked = !document.body.classList.contains('hv-scroll-unlocked');
+        if (isLocked) {
+            // HV 구간: 초기값 고정 + max 리셋
+            maxTop = 0;
+            maxBottom = 0;
+            root.style.setProperty('--vv-top', '0px');
+            root.style.setProperty('--vv-bottom', '0px');
+            root.style.setProperty('--vv-top-max', '0px');
+            root.style.setProperty('--vv-bottom-max', '0px');
+            return;
+        }
+
+        // ✅ Structure 이후: visualViewport 업데이트 재개
+        const y = window.pageYOffset || 0;
+        const pageTop = (typeof vv.pageTop === 'number') ? vv.pageTop : (y + (vv.offsetTop || 0));
+
+        // ✅ 상단 UI 인셋(px)
+        const top = Math.max(0, pageTop - y);
+        // ✅ 하단 UI 인셋(px)
+        const bottom = Math.max(0, (y + window.innerHeight) - (pageTop + vv.height));
+
+        // ✅ max값 갱신
+        if (top > maxTop && top < 100) maxTop = top;
+        if (bottom > maxBottom && bottom < 200) maxBottom = bottom;
+
+        root.style.setProperty('--vv-top', `${top}px`);
+        root.style.setProperty('--vv-bottom', `${bottom}px`);
+        root.style.setProperty('--vv-top-max', `${maxTop}px`);
+        root.style.setProperty('--vv-bottom-max', `${maxBottom}px`);
+    };
+
+    const schedule = () => {
+        if (rafId) return;
+        rafId = requestAnimationFrame(update);
+    };
+
+    // 초기 1회
+    schedule();
+
+    window.addEventListener('resize', schedule, { passive: true });
+    window.addEventListener('orientationchange', () => {
+        // 회전 시에는 max 리셋
+        maxTop = 0;
+        maxBottom = 0;
+        schedule();
+    }, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', schedule);
+        window.visualViewport.addEventListener('scroll', schedule);
+    }
+    
+    // ✅ unlock 시점 기록용 전역 함수 (디바운스용, 현재는 사용 안 함)
+    window.__vvMarkUnlock = () => {
+        // 주소창 확장 유지 방식에서는 불필요
+    };
+})();
+
 // ✅ 전역 scroll-behavior:smooth가 있어도 "즉시 점프"로 이동
 function scrollToInstantGlobal(top) {
     const prevHtml = document.documentElement.style.scrollBehavior;
@@ -22,15 +106,23 @@ function scrollToInstantGlobal(top) {
 // ✅ 브라우저 새로고침(리로드) 기준의 "히어로 진입 모션"을 재현
 function goToHeroWithReloadMotion() {
     scrollToInstantGlobal(0);
+    // ✅ 초기화: Structure wrapper를 확실히 숨김 (unlock 클래스 제거)
+    document.body.classList.remove('hv-scroll-unlocked');
+    // ✅ CSS display:none이 적용되기 전 렌더링 방지: 직접 스타일 설정
+    const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+    if (structureWrapper) {
+        structureWrapper.style.display = 'none';
+    }
+    hvCanScrollToStructure = false;
+    hvSloganUnlockArmed = false;
+    hvSloganUnlockAccPx = 0;
     // ✅ Swiper 풀페이징 사용 시: 히어로 슬라이드로 복귀
     if (USE_HV_SWIPER_PAGING && hvSwiper) {
-        hvSwiper.slideTo(0, 0);
+        hvJumpTo(0);
         applyHvPagerState(0);
     }
-    // 탑 이동 직후 히어로 텍스트 모션도 초기화 후 재생
-    requestAnimationFrame(() => {
-        playHeroTextMotion();
-    });
+    // 탑 이동 직후 히어로 텍스트 모션도 초기화 후 재생(중복 방지)
+    requestHeroTextMotionOnce();
 }
 
 // =========================================================
@@ -40,34 +132,171 @@ function goToHeroWithReloadMotion() {
 // =========================================================
 const USE_HV_SWIPER_PAGING = true;
 let hvSwiper = null;
-let hvEdgeLockUntil = 0; // ✅ 슬로건에서 "한 번은 스냅 유지"를 보장하기 위한 잠금
 let hvMousewheelEnabled = true;
-let hvSloganDownAcc = 0;
-let hvSloganDownAccAt = 0;
-let hvAllowDownToStructureUntil = 0;
-const HV_SLOGAN_DOWN_ACC_WINDOW_MS = 260;
-const HV_SLOGAN_DOWN_ACC_THRESHOLD = 120; // ✅ 클수록 "슬로건 스냅"이 더 강하게 유지됨
+// (정리) 슬로건→Structure는 자연 스크롤로 전환하므로 누적 임계치/엣지락 관련 상수는 제거
 
 // ✅ 슬로건(마지막 슬라이드)에서 구조로 내려갈 수 있는 상태인지
 // - false: 슬로건 콘텐츠 유지(페이지 스크롤 락)
 // - true: 구조가 슬로건을 덮으며 올라오도록 페이지 스크롤 허용 + Swiper 입력 비활성
 let hvCanScrollToStructure = false;
 let hvPageScrollLocked = false;
+// ✅ iOS pull-to-refresh용: Hero에서 아래로 당기는 동안에는 페이지 락을 걸지 않음
+let hvHeroPulling = false;
+// ✅ 메뉴 클릭 이동일 때만 타이틀(바텀→탑) 모션을 보여주기 위한 플래그
+let hvAnimateTitlesOnce = false;
+// ✅ 슬로건(마지막 슬라이드)에서 1번은 "멈춤(락)"을 보장한 뒤, 다음 아래 스크롤에서만 Structure로 unlock
+let hvSloganUnlockAccPx = 0;
+let hvSloganUnlockArmed = false;
+
+// ✅ HV(히어로/비전/슬로건)에서 Structure 이후(Structure/NFT/Roadmap)로 내려가기 위한 공통 unlock 함수
+// - (중요) GNB 클릭 핸들러는 initHvPagerSwiper() 바깥 스코프이므로, 내부 const 함수에 의존하면 클릭이 먹통이 된다.
+// - 따라서 "Structure 스크롤 구간 활성화"는 전역 함수로 분리해서 어디서든 호출 가능하게 한다.
+function unlockToStructureScroll() {
+    // ✅ unlock 상태로 즉시 전환 (이후 스크롤 이벤트가 정상 처리되도록)
+    hvCanScrollToStructure = true;
+    hvSloganUnlockArmed = false;
+    hvSloganUnlockAccPx = 0;
+
+    // ✅ body에 hv-scroll-unlocked 클래스 추가 → Structure wrapper display:block으로 전환
+    document.body.classList.add('hv-scroll-unlocked');
+    // ✅ Structure wrapper를 다시 보이게 (inline style 제거하여 CSS 규칙 적용)
+    const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+    if (structureWrapper) {
+        structureWrapper.style.display = '';
+    }
+    // ✅ Swiper/페이지 락 동기화
+    syncHvSwiperMousewheelWithPageScroll();
+    // ✅ 혹시 남아있는 스크롤 락(overflow hidden / body fixed)을 강제로 해제
+    forceReleaseAnyScrollLock();
+}
+
+// ✅ HV 구간 페이지 스크롤 락(더 강하게): body fixed로 스크롤 자체를 차단
+let hvDidFixedLock = false;
+let hvFixedLockScrollY = 0;
+
+// ✅ unlock 이후에도 스크롤이 안 되는 케이스 방지:
+// - html/body overflow:hidden 또는 body fixed(top:-y) 등이 남아있으면 Structure가 아예 안 올라옴
+function forceReleaseAnyScrollLock() {
+    // 모바일 메뉴가 열려있으면 건드리지 않음
+    const gnb = document.querySelector('.gnb');
+    if (gnb && gnb.classList.contains('is-menu-open')) return;
+
+    try {
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+    } catch (_) {}
+
+    try {
+        if (document.body.style.position === 'fixed') {
+            const topStr = document.body.style.top || '0px';
+            const y = Math.abs(parseInt(topStr, 10)) || 0;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            document.body.style.width = '';
+            scrollToInstantGlobal(y);
+        }
+    } catch (_) {}
+}
+// ✅ 모바일 첫 진입/새로고침 시 히어로 텍스트 모션이 2번 재생되는 현상 방지(디바운스)
+let heroMotionCooldownUntil = 0;
+function requestHeroTextMotionOnce() {
+    const now = performance.now();
+    if (now < heroMotionCooldownUntil) return;
+    heroMotionCooldownUntil = now + 900;
+    requestAnimationFrame(() => {
+        try { playHeroTextMotion(); } catch (_) {}
+    });
+}
+
+// (정리) 슬로건 → Structure 전환은 리빌(가짜 스크롤)로 만들지 않고,
+// ✅ 문서 스크롤로 Structure가 자연스럽게 올라와 슬로건을 덮도록 통일
+
+// ✅ Swiper 슬라이드 "즉시 점프" 유틸 (전환 애니메이션/스크롤링 모션 완전 제거)
+// - 일부 환경에서 slideTo(index, 0)만으로는 transition이 남는 케이스가 있어 강제로 0 처리
+function hvJumpTo(index) {
+    if (!USE_HV_SWIPER_PAGING || !hvSwiper) return;
+    try {
+        const prevSpeed =
+            hvSwiper.params && typeof hvSwiper.params.speed === 'number'
+                ? hvSwiper.params.speed
+                : 0;
+        if (hvSwiper.params) hvSwiper.params.speed = 0;
+        if (typeof hvSwiper.setTransition === 'function') hvSwiper.setTransition(0);
+        // 3번째 인자(runCallbacks)=false로 불필요한 중복 콜백/상태 꼬임 방지
+        hvSwiper.slideTo(index, 0, false);
+        if (hvSwiper.params) hvSwiper.params.speed = prevSpeed;
+    } catch (_) {
+        try {
+            hvSwiper.slideTo(index, 0, false);
+        } catch (__) {}
+    }
+}
 
 function lockPageScrollAtTop() {
-    if (hvPageScrollLocked) return;
+    // ✅ Hero pull-to-refresh 중에는 락을 걸면 제스처가 시작조차 안 되는 케이스가 있어 예외 처리
+    if (hvHeroPulling) return;
+    // ✅ 이미 락 상태여도, "탑 고정"을 매번 강제로 재적용
     hvPageScrollLocked = true;
     // 탑으로 고정
     if (window.pageYOffset > 0) scrollToInstantGlobal(0);
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+
+    // ✅ overflow:hidden으로 스크롤 차단
+    try {
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+
+        // ✅ 모바일(768px 이하)에서는 body fixed를 사용하지 않음
+        // - visualViewport 계산과 충돌하여 GNB 위치가 튀고 콘텐츠가 떨리는 문제 방지
+        // - 데스크탑에서만 body fixed로 강하게 잠금
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            hvDidFixedLock = false;
+            return;
+        }
+
+        // 다른 기능(모바일 메뉴 등)에서 이미 fixed 잠금이면 건드리지 않음
+        if (document.body.style.position === 'fixed') {
+            hvDidFixedLock = false;
+            return;
+        }
+
+        hvDidFixedLock = true;
+        hvFixedLockScrollY = window.scrollY || window.pageYOffset || 0;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${hvFixedLockScrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+    } catch (_) {}
 }
 
 function unlockPageScroll() {
     if (!hvPageScrollLocked) return;
     hvPageScrollLocked = false;
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    try {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+    } catch (_) {}
+
+    // ✅ HV 락으로 걸었던 body fixed만 되돌림
+    if (hvDidFixedLock) {
+        try {
+            const topStr = document.body.style.top || '0px';
+            const y = Math.abs(parseInt(topStr, 10)) || hvFixedLockScrollY || 0;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            document.body.style.width = '';
+            hvDidFixedLock = false;
+            hvFixedLockScrollY = 0;
+            scrollToInstantGlobal(y);
+        } catch (_) {}
+    }
 }
 
 function syncHvSwiperMousewheelWithPageScroll() {
@@ -78,14 +307,45 @@ function syncHvSwiperMousewheelWithPageScroll() {
     const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
     const idx = hvSwiper.activeIndex ?? 0;
 
-    // 마지막 슬라이드가 아니면 항상 Swiper 구간(페이지 스크롤 락)
-    const shouldLockPage = idx < last || (idx === last && !hvCanScrollToStructure);
+    // ✅ Structure 진입 이후에는(= hvCanScrollToStructure) hvPager가 페이지 스크롤을 다시 락하면 안 됨
+    // - activeIndex가 어떤 값이든, 구조 구간에서는 "항상 자연 스크롤"이 우선
+    let shouldLockPage = false;
+    if (!hvCanScrollToStructure) {
+        // ✅ 슬로건에서 unlock 대기 중일 때는 페이지 스크롤 락 해제 (Estrela Studio 방식)
+        // - Swiper의 touchReleaseOnEdges가 작동할 수 있도록
+        // - 자연스러운 스크롤이 페이지 스크롤로 전환되도록
+        if (idx === last && hvSloganUnlockArmed) {
+            shouldLockPage = false;
+        } else {
+            // 마지막 슬라이드가 아니면 항상 Swiper 구간(페이지 스크롤 락)
+            shouldLockPage = idx < last || (idx === last && !hvCanScrollToStructure);
+        }
+    }
+    // ✅ iOS pull-to-refresh를 위해: Hero(0번) & 최상단에서는 모바일에서 페이지 락을 걸지 않는다
+    if (window.innerWidth <= 768 && idx === 0 && (window.pageYOffset || 0) <= 0) {
+        shouldLockPage = false;
+    }
 
     if (shouldLockPage) lockPageScrollAtTop();
     else unlockPageScroll();
 
+    // ✅ 페이지 스크롤 구간에서는 hv-pager가 입력을 먹지 않도록 통과 처리
+    // - fixed hv-pager 위에서 스크롤해도 Structure가 올라와야 함
+    if (!shouldLockPage && hvCanScrollToStructure) {
+        document.body.classList.add('hv-scroll-unlocked');
+    } else {
+        document.body.classList.remove('hv-scroll-unlocked');
+    }
+
     // Swiper 입력 활성/비활성
-    const shouldEnableSwiperInput = shouldLockPage;
+    // ✅ 슬로건 unlock 대기 중일 때: 페이지 스크롤은 unlock하되, Swiper 입력은 활성 유지
+    // - 모바일: 자연스러운 스크롤 (touchReleaseOnEdges)
+    // - PC: 백스크롤 가능 (mousewheel)
+    let shouldEnableSwiperInput = shouldLockPage;
+    if (idx === last && hvSloganUnlockArmed && !hvCanScrollToStructure) {
+        shouldEnableSwiperInput = true; // Swiper 입력 유지
+    }
+    
     if (shouldEnableSwiperInput !== hvMousewheelEnabled) {
         hvMousewheelEnabled = shouldEnableSwiperInput;
         try {
@@ -117,13 +377,36 @@ function playTitleOnce(titleEl) {
     });
 }
 
-function applyHvPagerState(stepIndex) {
+function applyHvPagerState(stepIndex, skipHeroMotion = false) {
     // stepIndex: 0=Hero, 1=Vision1, 2=Vision2, 3=Slogan
+    // skipHeroMotion: true면 히어로 모션을 재생하지 않음 (초기화 시 사용)
     const pager = document.querySelector('#hvPager');
     if (!pager) return;
 
     pager.classList.toggle('hv-state-hero', stepIndex === 0);
     pager.classList.toggle('hv-show-image', stepIndex === 3);
+
+    // ✅ 핵심: 슬로건은 "화면 가득 단독"으로 먼저 고정되어 보여야 함
+    // - 슬로건(또는 비전)으로 진입하는 순간, Structure가 같이 올라오지 않도록
+    //   1) 문서 스크롤을 탑으로 고정 2) unlock 클래스를 제거 3) 슬로건에서만 unlock 대기
+    if (stepIndex === 1 || stepIndex === 2 || stepIndex === 3) {
+        // HV 영역에서는 기본적으로 페이지 스크롤을 잠금(Structure는 다음 입력에서만)
+        hvCanScrollToStructure = false;
+        document.body.classList.remove('hv-scroll-unlocked');
+        // ✅ Structure wrapper를 강제로 숨김 (CSS display:none 보강)
+        const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+        if (structureWrapper) {
+            structureWrapper.style.display = 'none';
+        }
+        // 슬로건에서만 unlock 트리거를 기다림
+        hvSloganUnlockArmed = (stepIndex === 3);
+        hvSloganUnlockAccPx = 0;
+        // ✅ Structure가 같이 보이는 원인의 90%는 "이전 unlock에서 남은 scrollY/body fixed" 잔여 상태
+        // 1) 잔여 스크롤 락/position:fixed 해제 → 2) scrollY=0 확정 → 3) HV 락 재적용
+        forceReleaseAnyScrollLock();
+        scrollToInstantGlobal(0);
+        lockPageScrollAtTop();
+    }
 
     // 슬라이드 진입 시 스크롤/입력 상태 동기화
     syncHvSwiperMousewheelWithPageScroll();
@@ -140,26 +423,67 @@ function applyHvPagerState(stepIndex) {
     if (stepIndex !== 0) {
         updateVisionVideoSource(true);
     }
-    if (stepIndex === 3) {
+    // ✅ 슬로건 이미지 로딩 지연으로 인한 전환 끊김(프레임 드랍) 방지
+    // - 2번 텍스트(슬라이드 2)에서 미리 이미지 src를 세팅해 캐시를 올려둠
+    if (stepIndex === 2 || stepIndex === 3) {
         updateVisionImageSource();
     }
 
     // 타이틀 애니메이션 재생
     // - 슬라이드 전환 시 항상 바텀→탑 모션이 "재생"되도록 강제로 리셋 후 재생
     if (stepIndex === 1) {
-        playTitleOnce(pager.querySelector('.vision-title-1'));
+        const t = pager.querySelector('.vision-title-1');
+        if (hvAnimateTitlesOnce) {
+            pager.classList.add('hv-title-mask');
+            playTitleOnce(t);
+        } else {
+            // ✅ 일반 스와이프/스크롤: 마스크/바텀→탑 모션 없이 즉시 노출
+            if (t) {
+                t.classList.remove('enter', 'exit');
+                t.classList.add('animate');
+            }
+        }
     } else if (stepIndex === 2) {
-        playTitleOnce(pager.querySelector('.vision-title-2'));
+        const t = pager.querySelector('.vision-title-2');
+        if (hvAnimateTitlesOnce) {
+            pager.classList.add('hv-title-mask');
+            playTitleOnce(t);
+        } else {
+            if (t) {
+                t.classList.remove('enter', 'exit');
+                t.classList.add('animate');
+            }
+        }
     } else if (stepIndex === 3) {
-        // ✅ 디졸브가 먼저 느껴지고, 그 다음 텍스트가 올라오도록 약간 딜레이
-        setTimeout(() => {
-            playTitleOnce(pager.querySelector('.vision-title-3'));
-        }, 120);
-    } else if (stepIndex === 0) {
+        // ✅ 슬로건 텍스트 노출/사라짐 효과를 비전 1,2와 "완전 동일"하게 통일
+        // - 딜레이가 있으면 컨테이너(opacity) 전환 + 라인(translate/opacity) 전환이 분리되어
+        //   마스크가 한 겹 더 걸린 것처럼 보일 수 있음
+        const t = pager.querySelector('.vision-title-3');
+        if (hvAnimateTitlesOnce) {
+            pager.classList.add('hv-title-mask');
+            playTitleOnce(t);
+        } else {
+            if (t) {
+                t.classList.remove('enter', 'exit');
+                t.classList.add('animate');
+            }
+        }
+    } else if (stepIndex === 0 && !skipHeroMotion) {
         // ✅ 백스크롤로 히어로 진입 시에도 텍스트 모션 리셋 + 재생
-        requestAnimationFrame(() => {
-            playHeroTextMotion();
-        });
+        // - skipHeroMotion이 true면 모션 생략 (초기화 시)
+        requestHeroTextMotionOnce();
+    }
+
+    // ✅ 메뉴 클릭 이동에서만 1회 애니메이션 → 이후엔 기본(즉시 노출)로 복귀
+    if (hvAnimateTitlesOnce && (stepIndex === 1 || stepIndex === 2 || stepIndex === 3)) {
+        hvAnimateTitlesOnce = false;
+        // 마스크 클래스는 전환이 끝난 뒤 제거(라인 애니메이션 시간과 동일)
+        setTimeout(() => {
+            try { pager.classList.remove('hv-title-mask'); } catch (_) {}
+        }, 900);
+    } else {
+        // 기본 상태에서는 마스크 제거
+        pager.classList.remove('hv-title-mask');
     }
 }
 
@@ -171,126 +495,100 @@ function initHvPagerSwiper() {
 
     const pagerEl = pager;
 
-    // ✅ 슬로건(마지막 슬라이드)에서 "한 번은 반드시 멈춤"을 강제
-    // - 빠른 휠/트랙패드 관성으로 슬로건 도착과 동시에 구조로 스크롤이 흘러버리는 현상 방지
-    const onPagerWheelCapture = (e) => {
+    // ✅ 슬로건→Structure는 "리빌"이 아니라, Swiper의 edge release + 페이지 스크롤 unlock으로 처리
+    // - 슬로건은 sticky로 고정되어 배경에 남고
+    // - Structure~Footer는 문서 스크롤로 자연스럽게 위로 올라와 덮는다.
+    // ✅ 단, "슬로건은 스냅(락)"이 1번 보장되어야 하므로,
+    // 슬로건 도착 직후에는 hvCanScrollToStructure=false(락 유지)로 두고,
+    // 슬로건에서 아래로 스크롤 입력이 한 번 더 들어왔을 때만 unlock 한다.
+    const normalizeWheelDeltaYToPx = (e) => {
+        const dy = typeof e.deltaY === 'number' ? e.deltaY : 0;
+        const mode = typeof e.deltaMode === 'number' ? e.deltaMode : 0;
+        if (mode === 1) return dy * 16;
+        if (mode === 2) return dy * (window.innerHeight || 800);
+        return dy;
+    };
+
+    const onSloganWheelCapture = (e) => {
         if (!hvSwiper) return;
         const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
         if (hvSwiper.activeIndex !== last) return;
-        const now = performance.now();
+        if (hvCanScrollToStructure) return;
+        if (!hvSloganUnlockArmed) return;
 
-        // ✅ 슬로건 도착 직후: 관성으로 구조까지 새는 이벤트를 잠깐 차단
-        if (now < hvEdgeLockUntil && e.deltaY > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
-
-        // ✅ "슬로건 페이지 스냅 강화"
-        // - 아래로(구조로 내려가기) 입력은 누적 임계치에 도달했을 때만 허용
-        if (e.deltaY > 0) {
-            // 이미 구조로 내려가도록 허용된 짧은 윈도우면 통과(자연 스크롤)
-            if (now < hvAllowDownToStructureUntil) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (!hvSloganDownAccAt || (now - hvSloganDownAccAt) > HV_SLOGAN_DOWN_ACC_WINDOW_MS) {
-                hvSloganDownAcc = 0;
-            }
-            hvSloganDownAccAt = now;
-            hvSloganDownAcc += (typeof getWheelAbsDeltaY === 'function') ? getWheelAbsDeltaY(e) : Math.abs(e.deltaY);
-
-            if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
-                return; // ✅ 계속 슬로건에 "락"
-            }
-
-            // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
-            hvSloganDownAcc = 0;
-            hvAllowDownToStructureUntil = now + 1200;
-
-            // ✅ 이제부터는 구조로 내려갈 수 있도록 페이지 스크롤을 허용하고 Swiper 입력을 비활성
-            hvCanScrollToStructure = true;
-            syncHvSwiperMousewheelWithPageScroll();
-            return;
-        }
+        const dyPx = normalizeWheelDeltaYToPx(e);
+        
+        // ✅ 위로 스크롤(백스크롤): 이 함수는 처리하지 않음 → Swiper가 정상 처리
+        if (dyPx <= 0) return;
+        
+        // ✅ 아래로 스크롤: unlock (Structure로 이동)
+        unlockToStructureScroll();
     };
-    // capture로 먼저 잡아서 구조로 내려가는 이벤트를 잠깐 막음
-    pagerEl.addEventListener('wheel', onPagerWheelCapture, { passive: false, capture: true });
+    pagerEl.addEventListener('wheel', onSloganWheelCapture, { passive: false, capture: true });
 
-    // ✅ 모바일 터치 이벤트 처리: 슬로건에서 스트럭처로 넘어가는 로직
-    let touchStartY = null;
-    let touchStartTime = null;
-    const onPagerTouchStart = (e) => {
+    // ✅ 터치 이벤트 리스너 제거 - 자연스러운 스크롤 방해 방지
+    // - Swiper의 touchReleaseOnEdges와 자연스러운 edge 동작에 맡김
+    // - 슬로건에서 아래로 스크롤 시 Swiper가 자동으로 터치를 해제하고 페이지 스크롤로 전환
+
+    // ✅ iOS 당겨서 새로고침(Pull-to-refresh) 허용:
+    // - Swiper 구간에서 페이지 스크롤을 overflow:hidden으로 락하면 iOS가 당겨서 새로고침을 막음
+    // - Hero(0번)에서 "아래로 당기기" 제스처만큼은 락을 잠깐 해제해 브라우저 기본 동작을 허용
+    let heroPullStartY = null;
+    const onHeroPullStart = (e) => {
         if (!hvSwiper) return;
-        const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
-        if (hvSwiper.activeIndex !== last) return;
-        if (e.touches && e.touches.length > 0) {
-            touchStartY = e.touches[0].clientY;
-            touchStartTime = performance.now();
+        if ((hvSwiper.activeIndex ?? 0) !== 0) return;
+        if ((window.pageYOffset || 0) > 0) return;
+        if (e.touches && e.touches.length) {
+            heroPullStartY = e.touches[0].clientY;
+            // ✅ iOS pull-to-refresh는 "제스처 시작 시점"에 락/Swiper가 터치를 잡으면 아예 시작이 안 됨
+            // 1) 락 해제 + 2) Swiper 터치 입력을 잠깐 OFF
+            hvHeroPulling = true;
+            try {
+                hvSwiper.allowTouchMove = false;
+                if (hvSwiper.mousewheel) hvSwiper.mousewheel.disable();
+            } catch (_) {}
+            unlockPageScroll();
         }
     };
-    const onPagerTouchMove = (e) => {
-        if (!hvSwiper || touchStartY === null) return;
-        const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
-        if (hvSwiper.activeIndex !== last) return;
-        const now = performance.now();
-        
-        // ✅ 슬로건 도착 직후: 관성으로 구조까지 새는 이벤트를 잠깐 차단
-        if (now < hvEdgeLockUntil) {
-            if (e.touches && e.touches.length > 0) {
-                const currentY = e.touches[0].clientY;
-                // ✅ 구조로 내려가기 의도 = 손가락이 "위로" 스와이프(dy < 0)
-                if (currentY < touchStartY) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-            }
-            return;
-        }
-        
+    const onHeroPullMove = (e) => {
+        if (heroPullStartY === null) return;
+        if (!hvSwiper) return;
+        if ((hvSwiper.activeIndex ?? 0) !== 0) return;
+        if ((window.pageYOffset || 0) > 0) return;
         if (!e.touches || !e.touches.length) return;
-        const currentY = e.touches[0].clientY;
-        const dy = currentY - touchStartY;
-
-            // ✅ 구조로 내려가기(페이지 down) = 손가락 위로 스와이프(dy < 0)
-            if (dy < 0) {
-            // 이미 구조로 내려가도록 허용된 짧은 윈도우면 통과(자연 스크롤)
-            if (now < hvAllowDownToStructureUntil) return;
-
-                e.preventDefault();
-                e.stopPropagation();
-
-            if (!hvSloganDownAccAt || (now - hvSloganDownAccAt) > HV_SLOGAN_DOWN_ACC_WINDOW_MS) {
-                hvSloganDownAcc = 0;
+        const dy = e.touches[0].clientY - heroPullStartY;
+        // ✅ 아래로 당길 때(>0): pull-to-refresh 의도 → 계속 unlock 유지
+        if (dy > 6) {
+            hvHeroPulling = true;
+            unlockPageScroll();
+            return;
+        }
+        // ✅ 위로 밀기(<0): 다음 슬라이드로 넘어가려는 의도 → Swiper 입력 복구
+        if (dy < -6) {
+            hvHeroPulling = false;
+            try {
+                hvSwiper.allowTouchMove = true;
+                if (hvSwiper.mousewheel) hvSwiper.mousewheel.enable();
+            } catch (_) {}
+            syncHvSwiperMousewheelWithPageScroll();
+        }
+    };
+    const onHeroPullEnd = () => {
+        heroPullStartY = null;
+        hvHeroPulling = false;
+        // ✅ 제스처 종료 후 Swiper/락 상태 복구
+        try {
+            if (hvSwiper) {
+                hvSwiper.allowTouchMove = true;
+                if (hvSwiper.mousewheel) hvSwiper.mousewheel.enable();
             }
-    hvSloganDownAccAt = now;
-
-    // 위로 스와이프 거리 누적
-    hvSloganDownAcc += Math.abs(dy) * 0.5;
-
-    if (hvSloganDownAcc < HV_SLOGAN_DOWN_ACC_THRESHOLD) {
-        return; // ✅ 계속 슬로건에 "락"
-    }
-
-    // 임계치 도달 → 다음 짧은 구간에서만 구조로의 자연 스크롤 허용
-    hvSloganDownAcc = 0;
-    hvAllowDownToStructureUntil = now + 1200;
-
-    // ✅ 이제부터 구조로 내려갈 수 있도록 페이지 스크롤을 허용
-    hvCanScrollToStructure = true;
-    syncHvSwiperMousewheelWithPageScroll();
-}
+        } catch (_) {}
+        if (hvSwiper && (hvSwiper.activeIndex ?? 0) === 0) syncHvSwiperMousewheelWithPageScroll();
     };
-    const onPagerTouchEnd = () => {
-        touchStartY = null;
-        touchStartTime = null;
-    };
-    
-    pagerEl.addEventListener('touchstart', onPagerTouchStart, { passive: true, capture: true });
-    pagerEl.addEventListener('touchmove', onPagerTouchMove, { passive: false, capture: true });
-    pagerEl.addEventListener('touchend', onPagerTouchEnd, { passive: true, capture: true });
-    pagerEl.addEventListener('touchcancel', onPagerTouchEnd, { passive: true, capture: true });
+    pagerEl.addEventListener('touchstart', onHeroPullStart, { passive: true, capture: true });
+    pagerEl.addEventListener('touchmove', onHeroPullMove, { passive: true, capture: true });
+    pagerEl.addEventListener('touchend', onHeroPullEnd, { passive: true, capture: true });
+    pagerEl.addEventListener('touchcancel', onHeroPullEnd, { passive: true, capture: true });
 
     hvSwiper = new Swiper('#hvPager', {
         direction: 'vertical',
@@ -308,22 +606,57 @@ function initHvPagerSwiper() {
         touchReleaseOnEdges: true,
         on: {
             init: function () {
-                applyHvPagerState(this.activeIndex);
+                // ✅ Swiper 초기화 직후 Structure를 확실히 숨김
+                document.body.classList.remove('hv-scroll-unlocked');
+                const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+                if (structureWrapper) {
+                    structureWrapper.style.display = 'none';
+                }
+                // ✅ 초기화 시에는 히어로 모션 생략 (window.load에서 실행)
+                applyHvPagerState(this.activeIndex, true);
                 syncHvSwiperMousewheelWithPageScroll();
+            },
+            slideChange: function () {
+                // ✅ 슬라이드 인덱스가 바뀌는 즉시 (전환 애니메이션 시작 전) unlock 대기 상태 강제 해제
+                const last = this.slides ? this.slides.length - 1 : 3;
+                // ✅ 모든 슬라이드 전환 시 일단 unlock 대기 해제
+                hvCanScrollToStructure = false;
+                hvSloganUnlockArmed = false;
+                hvSloganUnlockAccPx = 0;
+                
+                // ✅ Structure 확실히 숨김
+                document.body.classList.remove('hv-scroll-unlocked');
+                const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+                if (structureWrapper) {
+                    structureWrapper.style.display = 'none';
+                }
             },
             slideChangeTransitionStart: function () {
                 applyHvPagerState(this.activeIndex);
-                // ✅ 마지막(슬로건)으로 "도착"하는 전환 직후에는 잠깐 구조로의 스크롤 누수를 막음
+                // ✅ 3덩어리 구조:
+                // - Hero/Vision/Slogan: Swiper 페이징(페이지 스크롤 0에 고정)
+                // - Slogan(마지막)에서는 아래로 스크롤이 자연스럽게 Structure로 이어져야 함
+                const last = this.slides ? this.slides.length - 1 : 3;
+                // ✅ 전환 중에는 확실히 잠금 유지
+                hvCanScrollToStructure = false;
+                hvSloganUnlockArmed = false;
+                hvSloganUnlockAccPx = 0;
+                syncHvSwiperMousewheelWithPageScroll();
+            },
+            slideChangeTransitionEnd: function () {
+                // ✅ 슬로건 전환 완료 후 즉시 unlock 대기 상태로 전환 (딜레이 제거)
                 const last = this.slides ? this.slides.length - 1 : 3;
                 if (this.activeIndex === last) {
-                    hvEdgeLockUntil = performance.now() + 900;
+                    // ✅ 슬로건 도착: 즉시 unlock 대기 시작 (Estrela Studio 방식)
+                    // - Swiper의 touchReleaseOnEdges와 자연스러운 스크롤에 맡김
+                    hvSloganUnlockArmed = true;
+                    hvSloganUnlockAccPx = 0;
+                } else {
+                    // 히어로/비전: unlock 대기 비활성
+                    hvCanScrollToStructure = false;
+                    hvSloganUnlockArmed = false;
+                    hvSloganUnlockAccPx = 0;
                 }
-                // 슬로건 페이지로 들어갈 때 누적 초기화
-                hvSloganDownAcc = 0;
-                hvSloganDownAccAt = 0;
-                hvAllowDownToStructureUntil = 0;
-                // ✅ 슬로건에 들어올 때는 기본적으로 "구조로 내려가기"는 잠금(콘텐츠 유지)
-                hvCanScrollToStructure = false;
                 syncHvSwiperMousewheelWithPageScroll();
             },
         }
@@ -331,28 +664,40 @@ function initHvPagerSwiper() {
 
     // 페이지 스크롤 상태에 따라 Swiper/페이지 락 동기화
     window.addEventListener('scroll', () => {
-        const structureSection = document.querySelector('.structure-section');
         const scrollY = window.pageYOffset || 0;
         
-        // ✅ 구조 섹션이 뷰포트에 보이면 스크롤 허용 유지
-        if (structureSection) {
-            const structureRect = structureSection.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            
-            // 구조 섹션이 뷰포트 상단에 도달하거나 지나갔으면 스크롤 허용 유지
-            // 모바일에서는 더 관대하게 적용 (뷰포트의 80% 지점)
-            const isMobile = window.innerHeight <= 768;
-            const threshold = isMobile ? viewportHeight * 0.8 : viewportHeight * 0.5;
-            
-            if (structureRect.top <= threshold) {
-                hvCanScrollToStructure = true;
-            }
+        // ✅ 슬로건 unlock 대기 중 + 스크롤 발생 → 즉시 unlock (모바일 자연스러운 스크롤)
+        if (hvSloganUnlockArmed && !hvCanScrollToStructure && scrollY > 0) {
+            unlockToStructureScroll();
+            return;
         }
         
         // ✅ Structure에서 백스크롤로 다시 탑에 도달하면, 슬로건을 다시 "락" 상태로 되돌려
         //   비전2 → 슬로건 순으로 페이징이 정상 동작하게 유지
-        if (scrollY <= 1 && hvCanScrollToStructure) {
+        // ✅ unlock 직후 미세 스크롤(1px)로 즉시 재락되는 문제 방지:
+        // - "완전 탑(0)"에 도달했을 때만 재락
+        if (scrollY <= 0 && hvCanScrollToStructure) {
             hvCanScrollToStructure = false;
+            // ✅ 백스크롤로 탑 도달 시 hv-scroll-unlocked 클래스 제거
+            document.body.classList.remove('hv-scroll-unlocked');
+            // ✅ Structure wrapper를 다시 숨김
+            const structureWrapper = document.querySelector('.structure-to-footer-wrapper');
+            if (structureWrapper) {
+                structureWrapper.style.display = 'none';
+            }
+            // ✅ 슬로건으로 돌아왔을 때 즉시 unlock 대기 활성화 (딜레이 제거)
+            // - 백스크롤 복귀 시에는 이미 슬로건 화면이 안정화되어 있으므로 즉시 활성화
+            if (hvSwiper) {
+                const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
+                if (hvSwiper.activeIndex === last) {
+                    // ✅ 즉시 unlock 대기 재활성화 (누적값 명확히 0으로 리셋)
+                    hvSloganUnlockArmed = true;
+                    hvSloganUnlockAccPx = 0;
+                } else {
+                    hvSloganUnlockArmed = false;
+                    hvSloganUnlockAccPx = 0;
+                }
+            }
         }
         syncHvSwiperMousewheelWithPageScroll();
     }, { passive: true });
@@ -360,6 +705,8 @@ function initHvPagerSwiper() {
 
 // 페이지 로드 시(브라우저 새로고침 기준): 최상단 + 히어로 모션 재생
 window.addEventListener('load', () => {
+    // ✅ 페이지 로드 직후 Structure wrapper 확실히 숨김
+    document.body.classList.remove('hv-scroll-unlocked');
     goToHeroWithReloadMotion();
 });
 
@@ -466,7 +813,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // - (중요) 기존 scrollIntoView는 targetTop이 달라서 스텝/스냅 기준이 흔들릴 수 있음
             e.preventDefault();
             if (USE_HV_SWIPER_PAGING && hvSwiper) {
-                hvSwiper.slideTo(1, 850);
+                // ✅ 메뉴 클릭과 동일하게: 이 이동에서는 타이틀 모션(바텀→탑)을 1회만 재생
+                hvAnimateTitlesOnce = true;
+                // ✅ 다른 메뉴 이동과 동일하게: 전환 모션 없이 즉시 점프
+                hvJumpTo(1);
                 applyHvPagerState(1);
                 return;
             }
@@ -476,21 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ✅ 히어로~비전: Swiper 풀페이징 초기화
     initHvPagerSwiper();
-
-    // [FIX v4] Preload vision video early to avoid stutter on first entry (hero → vision)
-    // - 영상 소스 교체/로드가 "전환 순간"에 발생하면 프레임 드랍(느려짐/떨림) 체감이 생길 수 있음
-    setTimeout(() => {
-        try {
-            const v = document.querySelector('.vision-video');
-            if (v) {
-                v.preload = 'auto';
-                // Set correct source once so browser can fetch before the first scroll snap.
-                updateVisionVideoSource(true);
-                if (typeof v.load === 'function') v.load();
-            }
-        } catch (e) {}
-    }, 0);
-
     
     // GNB 메뉴 클릭 시 해당 섹션으로 스크롤
     const gnbMenuItems = document.querySelectorAll('.gnb-menu-item');
@@ -517,7 +852,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMenuHidden = gnbMobileMenu ? gnbMobileMenu.hasAttribute('hidden') : true;
         if (!isOpen && isMenuHidden) return;
 
-        gnb.classList.remove('is-menu-open'); // 페이드아웃 시작
+        // ✅ iOS 깜빡임 방지: 디졸브(페이드) 제거 → 즉시 닫기
+        gnb.classList.remove('is-menu-open');
         if (gnbHamburger) gnbHamburger.setAttribute('aria-expanded', 'false');
         if (gnbHamburgerIcon) gnbHamburgerIcon.setAttribute('src', MENU_ICON_SRC);
         if (gnbHamburger) gnbHamburger.setAttribute('aria-label', '메뉴 열기');
@@ -538,18 +874,12 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollLockY = 0;
         }
 
-        // 디졸브 아웃이 끝난 뒤에 hidden 처리(즉시 hidden하면 애니메이션이 안 보임)
+        // ✅ 즉시 hidden 처리 (디졸브 제거)
         if (mobileMenuCloseTimer) {
             clearTimeout(mobileMenuCloseTimer);
             mobileMenuCloseTimer = null;
         }
-        if (gnbMobileMenu) {
-            mobileMenuCloseTimer = setTimeout(() => {
-                // 타이머 중 다시 열렸다면 hidden 처리하지 않음
-                if (gnb && gnb.classList.contains('is-menu-open')) return;
-                gnbMobileMenu.setAttribute('hidden', '');
-            }, MOBILE_MENU_FADE_MS);
-        }
+        if (gnbMobileMenu) gnbMobileMenu.setAttribute('hidden', '');
     };
 
     const openMobileMenu = () => {
@@ -560,14 +890,14 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileMenuCloseTimer = null;
         }
 
-        // hidden을 먼저 제거해서 DOM에 노출(이 상태는 opacity:0)
+        // ✅ iOS 깜빡임 방지: 디졸브 제거 → 즉시 열기
         if (gnbMobileMenu) gnbMobileMenu.removeAttribute('hidden');
-
-        // 다음 프레임에 is-menu-open을 붙여 opacity:1로 디졸브 인
-        requestAnimationFrame(() => {
-            if (!gnb) return;
-            gnb.classList.add('is-menu-open');
-        });
+        gnb.classList.add('is-menu-open');
+        // ✅ (모바일) 이동 중 커버가 남아있을 수 있으니, 메뉴를 열 때는 즉시 커버를 내린다.
+        try {
+            const cover = document.getElementById('mobile-nav-cover');
+            if (cover) cover.classList.remove('is-active');
+        } catch (_) {}
 
         if (gnbHamburger) gnbHamburger.setAttribute('aria-expanded', 'true');
         if (gnbHamburgerIcon) gnbHamburgerIcon.setAttribute('src', CLOSE_ICON_SRC);
@@ -606,11 +936,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 각 섹션별 추가 오프셋 조정 (px 단위)
     // 양수: 더 아래로 스크롤, 음수: 더 위로 스크롤
-    const sectionOffsets = {
-        '#vision': 500,        // Vision 섹션 추가 오프셋 (0 = 기본값)
-        '#structure': 100,    // Structure 섹션 추가 오프셋
-        '#nft': 30,          // NFT 섹션 추가 오프셋
-        '#roadmap': 30       // Roadmap 섹션 추가 오프셋
+    // ✅ 섹션별 추가 오프셋 (뷰포트 기준 %) - 모바일/데스크탑 분리
+    // - px 고정값 대신, 화면 높이(vh) 비율로 관리해서 해상도/기기별로 자연스럽게 맞춘다.
+    // - 예) 10 = 10vh = (window.innerHeight * 0.10) px
+    // - ✅ 모바일은 별도 값으로 조정 가능하도록 분리
+    const sectionOffsetsVhDesktop = {
+        '#vision': 65,      // Vision 섹션 추가 오프셋 (65vh)
+        '#structure': 12,   // Structure 섹션 추가 오프셋 (12vh)
+        '#nft': 5,          // NFT 섹션 추가 오프셋 (5vh)
+        '#roadmap': 5       // Roadmap 섹션 추가 오프셋 (5vh)
+    };
+    const sectionOffsetsVhMobile = {
+        // ✅ 기본값은 데스크탑과 동일하게 시작 (필요 시 모바일만 따로 튜닝)
+        '#vision': 65,
+        '#structure': 15,
+        '#nft': 11,
+        '#roadmap': 5
+    };
+
+    // ✅ vh(%) → px 변환 유틸
+    const getSectionOffsetPx = (targetId) => {
+        const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+        // ✅ 모바일 우선, 없으면 데스크탑 값으로 fallback
+        const vh = isMobile
+            ? (sectionOffsetsVhMobile[targetId] ?? sectionOffsetsVhDesktop[targetId])
+            : sectionOffsetsVhDesktop[targetId];
+        if (typeof vh !== 'number') return 0;
+        const h = window.innerHeight || 0;
+        return Math.round((h * vh) / 100);
     };
 
     // ✅ 전역 scroll-behavior:smooth가 있어도, 특정 액션은 "즉시 점프"로 이동
@@ -626,6 +979,77 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.style.scrollBehavior = prevHtml;
             document.body.style.scrollBehavior = prevBody;
         });
+    };
+
+    // ✅ (모바일 메뉴) "스크롤 락만" 즉시 해제하는 유틸
+    // - 메뉴를 닫기(페이드아웃) 전에 먼저 body fixed/overflow를 풀어야
+    //   메뉴 클릭 이동(scrollToInstant/hvJumpTo)이 정상 동작한다.
+    // - (중요) 이 함수는 메뉴 오버레이는 그대로 유지한다(깜빡임 방지).
+    const releaseMobileMenuScrollLockOnly = () => {
+        // 모바일 메뉴가 열려있지 않으면 아무 것도 하지 않음
+        const isOpen = gnb && gnb.classList.contains('is-menu-open');
+        if (!isOpen) return;
+
+        // ✅ 스크롤 락 해제
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.height = '';
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+
+        // ✅ 스크롤 위치 복원(메뉴 오픈 시점)
+        if (scrollLockY) {
+            window.scrollTo(0, scrollLockY);
+            // (중요) 이후 closeMobileMenu()가 다시 복원하지 않도록 0으로 초기화
+            scrollLockY = 0;
+        }
+    };
+
+    // ✅ (모바일) 메뉴 클릭 이동 중 바닥(HV 비전/슬로건) 깜빡임 방지용 커버
+    // - body fixed 해제/scrollTo/hvJumpTo 과정에서 1프레임 비치는 케이스를 완전히 차단한다.
+    const ensureMobileNavCover = () => {
+        let el = document.getElementById('mobile-nav-cover');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'mobile-nav-cover';
+        el.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(el);
+        return el;
+    };
+    const showMobileNavCover = () => {
+        const el = ensureMobileNavCover();
+        // ✅ iOS에서 클래스 적용이 1프레임 늦는 케이스 방지
+        void el.offsetHeight;
+        el.classList.add('is-active');
+    };
+    const hideMobileNavCoverDeferred = (frames = 5) => {
+        const el = document.getElementById('mobile-nav-cover');
+        if (!el) return;
+        let left = Math.max(1, frames | 0);
+        const tick = () => {
+            left -= 1;
+            if (left <= 0) el.classList.remove('is-active');
+            else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    };
+
+    // ✅ (모바일) 메뉴 클릭 이동 시 깜빡임 방지용: 메뉴를 "조금 늦게" 닫기
+    // - iOS에서 scrollTo/hvJumpTo 직후 1프레임 동안 HV(비전/슬로건)가 노출되는 케이스가 있어,
+    //   이동이 화면에 반영된 다음에 메뉴를 닫는다.
+    const closeMobileMenuDeferred = (frames = 2) => {
+        if (!gnb || !gnb.classList.contains('is-menu-open')) return;
+        let left = Math.max(1, frames | 0);
+        const tick = () => {
+            left -= 1;
+            if (left <= 0) closeMobileMenu();
+            else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
     };
 
     // ✅ 메뉴 이동 시마다 slide-in 인터랙션을 다시 보이게(모션 재가동)
@@ -726,9 +1150,13 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // 모바일에서 메뉴 클릭 시 햄버거 메뉴 닫기
-            if (gnb && gnb.classList.contains('is-menu-open')) {
-                closeMobileMenu();
+            // ✅ 모바일: 메뉴가 열린 상태에서 클릭 이동이 "안 되는" 원인 = body fixed(스크롤락)
+            // - 먼저 스크롤락만 해제하고(오버레이는 유지), 이동을 완료한 뒤 메뉴를 닫는다.
+            const wasMenuOpen = gnb && gnb.classList.contains('is-menu-open');
+            if (wasMenuOpen) {
+                // ✅ 이동 중 바닥이 비치지 않도록 커버 ON → 스크롤락 해제
+                showMobileNavCover();
+                releaseMobileMenuScrollLockOnly();
             }
 
             const targetId = item.getAttribute('href');   // 예: #vision, #structure ...
@@ -739,7 +1167,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const gnbHeight = gnb ? gnb.offsetHeight : 0;
             let targetElement = targetSection;
-            let additionalOffset = sectionOffsets[targetId] || 0; // 섹션별 추가 오프셋
+            // ✅ 섹션별 추가 오프셋(px) - vh(%) 기반으로 환산
+            let additionalOffset = getSectionOffsetPx(targetId);
 
             // ---- Vision: "SJ World는 ... 캠퍼스입니다." 위치로 가고 싶을 때 ----
             if (targetId === '#vision') {
@@ -747,9 +1176,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (USE_HV_SWIPER_PAGING && hvSwiper) {
                     // 히어로~비전 구간은 항상 문서 최상단에 있으므로, 먼저 탑으로 올린 뒤 슬라이드 이동
                     scrollToInstant(0);
-                    hvSwiper.slideTo(1, 850);
+                    // ✅ 메뉴 클릭 이동에서만 타이틀 모션(바텀→탑)을 1회만 재생
+                    hvAnimateTitlesOnce = true;
+                    // ✅ 다른 메뉴 이동과 동일하게: 전환 모션 없이 즉시 점프
+                    hvJumpTo(1);
                     applyHvPagerState(1);
                     replayVisionIntroMotion();
+                    // ✅ 이동 완료 후 메뉴 닫기(깜빡임 방지: 2프레임 뒤 닫기)
+                    if (wasMenuOpen) closeMobileMenuDeferred(2);
+                    if (wasMenuOpen) hideMobileNavCoverDeferred(6);
                     return;
                 }
                 // 1순위: 비전 첫 문구에 앵커를 하나 심어두고(class는 원하는대로)
@@ -759,6 +1194,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetSection.querySelector('.vision-text-1'); // 없으면 현재 비전 텍스트의 첫 블럭
                 if (introAnchor) {
                     targetElement = introAnchor;
+                }
+            }
+
+            // ✅ Structure / NFT / Roadmap: Structure unlock 필요
+            if (targetId === '#structure' || targetId === '#nft' || targetId === '#roadmap') {
+                // Structure 이후 섹션이므로 unlock
+                if (!hvCanScrollToStructure) {
+                    // ✅ 1) unlock 실행
+                    unlockToStructureScroll();
+                    
+                    // ✅ 2) unlock 완료 후 스크롤: 3프레임 대기 (확실한 레이아웃 계산)
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                // 레이아웃 강제 리플로우
+                                void document.body.offsetHeight;
+                                
+                                const rect = targetElement.getBoundingClientRect();
+                                const absoluteTop = rect.top + window.pageYOffset;
+                                const scrollTop = absoluteTop - gnbHeight - gnbTopMargin + additionalOffset;
+                                scrollToInstant(scrollTop);
+                                replaySlideInAnimations(targetSection);
+                                // ✅ 이동 완료 후 메뉴 닫기(깜빡임 방지: 2프레임 뒤 닫기)
+                                if (wasMenuOpen) closeMobileMenuDeferred(2);
+                                if (wasMenuOpen) hideMobileNavCoverDeferred(6);
+                            });
+                        });
+                    });
+                    return; // 아래 스크롤 코드 실행 안함
                 }
             }
 
@@ -782,6 +1246,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 replaySlideInAnimations(targetSection);
             }
+
+            // ✅ 이동 완료 후 메뉴 닫기(깜빡임 방지: 2프레임 뒤 닫기)
+            if (wasMenuOpen) closeMobileMenuDeferred(2);
+            if (wasMenuOpen) hideMobileNavCoverDeferred(6);
         });
     });
     
@@ -822,12 +1290,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 히어로/로드맵 구간 기준으로 플로팅 버튼 노출 제어(768px 이하)
-    const heroSection = document.querySelector('.hero-section');
-    const roadmapSection = document.querySelector('#roadmap');
+    // ✅ 모바일 하단 플로팅 발급 버튼 노출 범위:
+    // - "스트럭처 섹션 시작" ~ "화이트페이퍼 섹션 진입 직전"까지만 노출(백스크롤 포함)
+    const startEl = document.querySelector('#structure') || document.querySelector('.structure-section');
     const whitepaperSection = document.querySelector('.whitepaper-section');
+    const endEl =
+        whitepaperSection ||
+        document.querySelector('.roadmap-end-anchor') ||
+        document.querySelector('#roadmap .roadmap-timeline');
     const updateMobileIssueVisibility = () => {
-        if (!mobileIssueBtn || !heroSection) return;
+        if (!mobileIssueBtn || !startEl || !endEl) return;
 
         // 768px 이하에서만 제어
         if (window.innerWidth > 768) {
@@ -836,39 +1308,30 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const rect = heroSection.getBoundingClientRect();
-        const heroVisible = rect.bottom > 0 && rect.top < window.innerHeight;
-        if (heroVisible) {
-            mobileIssueBtn.classList.add('is-hidden');
-        } else {
+        const y = window.pageYOffset || 0;
+        const startTop = startEl.getBoundingClientRect().top + y;
+
+        // ✅ 화이트페이퍼에서 계속 보이는 케이스 방지:
+        // - endTop 절대좌표 비교가 환경에 따라 흔들릴 수 있어,
+        //   whitepaper가 뷰포트에 "진입"하면 무조건 숨김 처리(가장 확실)
+        const wpHideBufferPx = 80; // 화이트페이퍼 진입 전 여유(필요 시 미세조정)
+        const wpEntered = !!whitepaperSection && (whitepaperSection.getBoundingClientRect().top <= (window.innerHeight - wpHideBufferPx));
+
+        // endEl이 타임라인인 경우: bottom 기준, anchor인 경우: top 기준
+        const endRect = endEl.getBoundingClientRect();
+        const endTop = (endEl.classList && endEl.classList.contains('roadmap-end-anchor'))
+            ? (endRect.top + y)
+            : (endRect.bottom + y);
+
+        const inRange = (y >= (startTop - 1)) && !wpEntered && (y < (endTop - 1));
+
+        if (inRange) {
             mobileIssueBtn.classList.remove('is-hidden');
-        }
-
-        // 화이트페이퍼 섹션 진입 "직전"부터는 버튼이 자연스럽게 사라지도록 처리
-        // - whitepaperSection이 화면 하단에 닿기 조금 전에(버퍼) 디졸브 아웃
-        // - 다시 위로 올라가면(whitepaperSection이 멀어지면) 재노출
-        const whitepaperFadeBufferPx = 80; // ✅ 필요 시 값만 미세 조정(클수록 더 일찍 사라짐)
-        if (whitepaperSection) {
-            const wpRect = whitepaperSection.getBoundingClientRect();
-            const isApproachingWhitepaper = wpRect.top <= (window.innerHeight + whitepaperFadeBufferPx);
-            if (isApproachingWhitepaper) {
-                mobileIssueBtn.classList.add('is-faded');
-            } else {
-                mobileIssueBtn.classList.remove('is-faded');
-            }
-            return;
-        }
-
-        // (예외) 화이트페이퍼 섹션이 없으면: 로드맵 섹션을 완전히 지난 이후 구간에서 디졸브 아웃
-        if (roadmapSection) {
-            const roadmapRect = roadmapSection.getBoundingClientRect();
-            const isPastRoadmap = roadmapRect.bottom <= 0;
-            if (isPastRoadmap) mobileIssueBtn.classList.add('is-faded');
-            else mobileIssueBtn.classList.remove('is-faded');
-            return;
-        }
-
         mobileIssueBtn.classList.remove('is-faded');
+        } else {
+            // ✅ 범위 밖에서는 완전 숨김(클릭/터치 불가)
+            mobileIssueBtn.classList.add('is-hidden');
+        }
     };
 
     const handleResize = () => {
@@ -882,6 +1345,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMobileIssueVisibility();
     window.addEventListener('scroll', updateMobileIssueVisibility, { passive: true });
     window.addEventListener('resize', handleResize);
+
+    // ✅ Hero(최상단)에서 pull-to-refresh가 가능하도록: 스와이프 구간에서 페이지가 내려가 버리는 것을 방지
+    // - Hero/비전 구간에서는 원칙적으로 pageYOffset이 0이어야 함(Structure는 slogan unlock 이후)
+    // - 단, heroPulling 중에는 pull-to-refresh 제스처를 위해 예외 처리
+    window.addEventListener('scroll', () => {
+        if (hvStructureRevealActive) return;
+        if (!USE_HV_SWIPER_PAGING || !hvSwiper) return;
+        if (hvHeroPulling) return;
+        const idx = hvSwiper.activeIndex ?? 0;
+        const last = hvSwiper.slides ? hvSwiper.slides.length - 1 : 3;
+        if (idx < last && !hvCanScrollToStructure) {
+            if ((window.pageYOffset || 0) > 0) scrollToInstantGlobal(0);
+        }
+    }, { passive: true });
 });
 
 // Vision Section Parallax Scroll (1000vh)
@@ -898,18 +1375,7 @@ let visionAutoMidRafId = 0;
 let visionAutoMidLockUntil = 0;
 // ✅ Swiper 풀페이징을 사용하는 경우에는 기존 바닐라 스텝 페이징 로직은 완전히 비활성화(충돌 방지)
 const VISION_AUTO_STEPS_ENABLED = !USE_HV_SWIPER_PAGING;
-const VISION_STEP_DURATION_MS = 980;
-const VISION_STEP_DURATION_HERO_TO_V1_MS = 650;  // [FIX v4] faster hero → vision step1
-const VISION_STEP_DURATION_V1_TO_V2_MS   = 550;  // [FIX v4] faster vision step1 → step2
-
-function getVisionStepDurationMs(nextStepIndex, durationMs) {
-    // Only override when caller is using the default step duration.
-    if (typeof VISION_STEP_DURATION_MS !== 'undefined' && durationMs !== VISION_STEP_DURATION_MS) return durationMs;
-    if (nextStepIndex === 1) return VISION_STEP_DURATION_HERO_TO_V1_MS;
-    if (nextStepIndex === 2) return VISION_STEP_DURATION_V1_TO_V2_MS;
-    return durationMs;
-}
-          // ✅ 자동 스크롤 1회 재생 길이(원하면 미세조정)
+const VISION_STEP_DURATION_MS = 980;          // ✅ 자동 스크롤 1회 재생 길이(원하면 미세조정)
 
 // ✅ GNB(Vision) 클릭과 동일한 "도착 시점"을 만들기 위한 기준값
 // - GNB 코드에서 사용하던 값과 반드시 동일해야 스냅이 흔들리지 않음
@@ -1084,10 +1550,6 @@ function startVisionAutoStepToTop(targetTop, nextStepIndex, durationMs = VISION_
     // ✅ 자동 전환 시작 시 누적값 초기화(다음 입력에 영향 없게)
     resetVisionBackAccumulators();
 
-    // [FIX v4] speed up early transitions (hero→v1, v1→v2)
-    durationMs = getVisionStepDurationMs(nextStepIndex, durationMs);
-
-
     visionAutoMidIsPlaying = true;
     visionAutoMidLockUntil = performance.now() + durationMs + 520;
 
@@ -1222,10 +1684,6 @@ function startVisionAutoStep(visionSection, toProgress, nextStepIndex, durationM
 
     // ✅ 자동 전환 시작 시 누적값 초기화(다음 입력에 영향 없게)
     resetVisionBackAccumulators();
-
-    // [FIX v4] speed up early transitions (hero→v1, v1→v2)
-    durationMs = getVisionStepDurationMs(nextStepIndex, durationMs);
-
 
     visionAutoMidIsPlaying = true;
     // ✅ 자동 재생 중 사용자 스크롤 개입 방지(살짝 여유 포함)
@@ -1474,6 +1932,57 @@ let lastVisionVideoSrc = null;
 // 비전 섹션 이미지 소스 (모바일/데스크탑 분기)
 // - 768px 이하: vision_sjw_m.jpg
 // - 그 외: vision_sjw.jpg
+
+// ---------------------------------------------------------------------
+// Vision 이미지/리소스 프리로드 (전환 시 끊김 방지)
+// ---------------------------------------------------------------------
+function preloadVisionAssets() {
+    try {
+        // 중복 실행 방지
+        if (window.__SJW_VISION_ASSETS_PRELOADED__) return;
+        window.__SJW_VISION_ASSETS_PRELOADED__ = true;
+
+        const head = document.head || document.getElementsByTagName('head')[0];
+
+        // <link rel="preload"> 로 브라우저에 힌트 제공 (지원 브라우저에서 효과)
+        const ensurePreload = (as, href, type) => {
+            if (!href) return;
+            const selector = `link[rel="preload"][as="${as}"][href="${href}"]`;
+            if (head && !head.querySelector(selector)) {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = as;
+                link.href = href;
+                if (type) link.type = type;
+                head.appendChild(link);
+            }
+        };
+
+        ensurePreload('image', VISION_IMAGE_DESKTOP_SRC);
+        ensurePreload('image', VISION_IMAGE_MOBILE_SRC);
+
+        // 실제 프리로드(캐시 적재) - 슬로건 전환 직전 프레임 드랍 방지
+        const imgA = new Image();
+        imgA.decoding = 'async';
+        imgA.src = VISION_IMAGE_DESKTOP_SRC;
+
+        const imgB = new Image();
+        imgB.decoding = 'async';
+        imgB.src = VISION_IMAGE_MOBILE_SRC;
+
+        // 비전 이미지 엘리먼트에도 디코딩 힌트(지원 브라우저에서만)
+        const el = document.querySelector('.vision-image');
+        if (el) {
+            el.decoding = 'async';
+            // 전환 직전에 로딩이 걸리지 않도록 eager 힌트
+            el.loading = 'eager';
+        }
+    } catch (e) {
+        // fail-safe: 프리로드 실패해도 기능에는 영향 없게
+        console.warn('[SJW] preloadVisionAssets failed:', e);
+    }
+}
+
 const VISION_IMAGE_DESKTOP_SRC = 'img/vision_sjw.jpg';
 const VISION_IMAGE_MOBILE_SRC = 'img/vision_sjw_m.jpg';
 let lastVisionImageSrc = null;
@@ -1876,6 +2385,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVisionParallax();
     // 초기 로드 시 이미지도 해상도에 맞춰 세팅
     updateVisionImageSource();
+    // ✅ 전환 스터터(느려짐/떨림) 방지: 히어로/비전 구간에서 사용할 슬로건 이미지 선 로딩
+    preloadVisionAssets();
 });
 
 // Video autoplay and loop - only when Vision section is in view
@@ -2358,18 +2869,17 @@ function initNFTLevelDetailsModal() {
     });
 }
 
-// NFT 캐러셀 초기화 및 제어 (CodePen 스타일 드래그 + 화살표 버튼)
+// NFT 캐러셀 초기화 및 제어 (6슬롯: 5개 보임 + 1개 숨김, 이동 방향 "역방향" 모션 방지)
 function initNFTCarousel() {
     const carousel = document.querySelector(".nft-carousel");
     if (!carousel) return;
-
+    
     // ----------------------------
-    // 0) 기존 4개 카드 내용을 템플릿으로 저장
+    // 0) 기존 카드 내용을 템플릿으로 저장
     // ----------------------------
     const originalCards = Array.from(carousel.querySelectorAll(".nft-card"));
     const templates = originalCards.map((c) => c.innerHTML);
-    const N = templates.length; // 4
-
+    const N = templates.length;
     if (N < 2) return;
 
     // ----------------------------
@@ -2379,7 +2889,6 @@ function initNFTCarousel() {
     carousel.innerHTML = "";
     const SLOT_COUNT = 6;
     const slots = [];
-
     for (let i = 0; i < SLOT_COUNT; i++) {
         const el = document.createElement("div");
         el.className = "nft-card";
@@ -2389,17 +2898,7 @@ function initNFTCarousel() {
 
     // 역할(5개 보임 + 1개 hidden)
     // slots[0]=L2, [1]=L1, [2]=C, [3]=R1, [4]=R2, [5]=hidden(incoming)
-    const ROLE_CLASSES = [
-        "prev-prev",
-        "prev",
-        "active",
-        "next",
-        "next-next",
-        "hidden-right", // 초기: 다음에 들어올 카드 준비(오른쪽)
-    ];
-
     const mod = (a, b) => ((a % b) + b) % b;
-
     let currentIndex = 0; // 중앙(C)의 데이터 index
     let isTransitioning = false;
 
@@ -2417,39 +2916,43 @@ function initNFTCarousel() {
         );
         el.classList.add(role);
 
-        // CSS 변수 설정 (기본 transform이 CSS 변수를 사용하도록)
+        // ✅ CSS 변수 기반 transform(슬롯 step * slot index)을 JS에서 설정
+        // - % 기반 translateX는 카드 너비에 종속되어 "겹침"이 쉽게 발생하므로,
+        //   컨테이너 기준(step) 슬롯 배치로 변경한다.
         if (role === "active") {
-            el.style.setProperty("--tx", "0%");
+            el.style.setProperty("--slot", "0");
             el.style.setProperty("--scale", "1");
             el.style.setProperty("--opacity", "1");
             el.style.zIndex = "3";
         } else if (role === "prev-prev") {
-            el.style.setProperty("--tx", "-250%");
+            el.style.setProperty("--slot", "-2");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0.2");
             el.style.zIndex = "0";
         } else if (role === "prev") {
-            el.style.setProperty("--tx", "-150%");
+            el.style.setProperty("--slot", "-1");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0.2");
             el.style.zIndex = "1";
         } else if (role === "next") {
-            el.style.setProperty("--tx", "50%");
+            el.style.setProperty("--slot", "1");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0.2");
             el.style.zIndex = "1";
         } else if (role === "next-next") {
-            el.style.setProperty("--tx", "150%");
+            el.style.setProperty("--slot", "2");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0.2");
             el.style.zIndex = "0";
         } else if (role === "hidden-left") {
-            el.style.setProperty("--tx", "-150%");
+            // ✅ 숨김 슬롯은 "왼쪽 2번째(prev-prev)" 위치에서 대기(역방향 이동 방지)
+            el.style.setProperty("--slot", "-3");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0");
             el.style.zIndex = "0";
         } else if (role === "hidden-right") {
-            el.style.setProperty("--tx", "50%");
+            // ✅ 숨김 슬롯은 "오른쪽 2번째(next-next)" 위치에서 대기(역방향 이동 방지)
+            el.style.setProperty("--slot", "3");
             el.style.setProperty("--scale", "0.9");
             el.style.setProperty("--opacity", "0");
             el.style.zIndex = "0";
@@ -2464,54 +2967,42 @@ function initNFTCarousel() {
         el.dataset.index = String(dataIndex);
     }
 
-    // 텔레포트 함수: 순간이동 시 트랜지션 끄기
+    // ✅ 텔레포트(순간 이동): 역방향으로 "가로지르는" 모션이 보이지 않도록 transition을 끄고 위치만 바꾼다
     function teleportTo(el, role, dataIndex) {
-        // 1) 순간이동: 트랜지션 OFF
         el.classList.add("no-transform-transition");
-        if (dataIndex !== undefined) {
-            render(el, dataIndex);
-        }
+        if (dataIndex !== undefined) render(el, dataIndex);
         setRole(el, role);
-
-        // 2) 다음 프레임에 트랜지션 ON 복구
-        requestAnimationFrame(() => {
-            el.classList.remove("no-transform-transition");
-        });
+        requestAnimationFrame(() => el.classList.remove("no-transform-transition"));
     }
 
-    // 현재 index 기준으로 5개 보이는 카드 + hidden 준비
     function layoutInitial() {
         // 보이는 5개: L2 L1 C R1 R2
-        render(slots[0], mod(currentIndex - 2, N)); 
+        render(slots[0], mod(currentIndex - 2, N));
         setRole(slots[0], "prev-prev");
-        
-        render(slots[1], mod(currentIndex - 1, N)); 
+
+        render(slots[1], mod(currentIndex - 1, N));
         setRole(slots[1], "prev");
-        
-        render(slots[2], mod(currentIndex, N)); 
+
+        render(slots[2], mod(currentIndex, N));
         setRole(slots[2], "active");
-        
-        render(slots[3], mod(currentIndex + 1, N)); 
+
+        render(slots[3], mod(currentIndex + 1, N));
         setRole(slots[3], "next");
-        
-        render(slots[4], mod(currentIndex + 2, N)); 
+
+        render(slots[4], mod(currentIndex + 2, N));
         setRole(slots[4], "next-next");
 
-        // hidden 슬롯: 다음에 들어올 R2(= currentIndex + 3)를 미리 준비 (오른쪽)
-        render(slots[5], mod(currentIndex + 3, N));
-        setRole(slots[5], "hidden-right");
-        slots[5].classList.add("no-transform-transition"); // 순간 이동은 티 안 나게
+        // hidden 슬롯: 다음에 들어올 R2(= currentIndex + 3)를 미리 준비 (오른쪽 바깥)
+        // ✅ hidden 준비는 항상 teleportTo로 처리(역방향으로 휙 움직이는 모션 방지)
+        teleportTo(slots[5], "hidden-right", mod(currentIndex + 3, N));
 
-        // CSS 적용을 위한 강제 reflow
+        // CSS 적용 강제
         carousel.offsetHeight;
     }
 
-    // CSS transition 시간 (styles.css가 0.45s라서 450ms)
+    // styles.css transition(0.45s)과 동일
     const DURATION = 450;
 
-    // ----------------------------
-    // 2) NEXT (오른쪽 → 왼쪽으로 한 칸씩)
-    // ----------------------------
     function goNext() {
         if (isTransitioning) return;
         isTransitioning = true;
@@ -2519,17 +3010,8 @@ function initNFTCarousel() {
         carousel.classList.remove("direction-prev");
         carousel.classList.add("direction-next");
 
-        // 들어올 카드(숨김 슬롯)는 이미 "hidden-right" 상태로 준비되어 있음
-        // 이제 한 칸씩 역할 이동:
-        // L2 -> hidden-left(사라짐) - 텔레포트 필요
-        // L1 -> L2
-        // C  -> L1
-        // R1 -> C
-        // R2 -> R1
-        // hidden-right -> R2 (새로 등장)
-
-        // L2는 왼쪽 끝에서 사라지므로 텔레포트로 처리
-        teleportTo(slots[0], "hidden-left");
+        // NEXT: 오른쪽 → 왼쪽으로 한 칸씩
+        teleportTo(slots[0], "hidden-left");               // L2 out
         setRole(slots[1], "prev-prev");                   // L1 -> L2
         setRole(slots[2], "prev");                        // C  -> L1
         setRole(slots[3], "active");                      // R1 -> C
@@ -2537,10 +3019,8 @@ function initNFTCarousel() {
         slots[5].classList.remove("no-transform-transition");
         setRole(slots[5], "next-next");                   // hidden -> R2
 
-        // 애니메이션 끝난 뒤: 슬롯 참조를 회전 + 다음 hidden 준비
         setTimeout(() => {
-            // 회전 (역주행 안 보이게 "역할 기준"으로 재배치)
-            // 새 L2는 기존 slots[1], 새 L1은 slots[2] ... 새 R2는 slots[5]
+            // 슬롯 참조 회전(역주행 방지)
             const oldL2 = slots[0];
             slots[0] = slots[1];
             slots[1] = slots[2];
@@ -2551,20 +3031,15 @@ function initNFTCarousel() {
 
             currentIndex = mod(currentIndex + 1, N);
 
-            // 이제 slots[5]를 다시 hidden-right로 보내고 "다음에 들어올 카드"를 미리 렌더
-            render(slots[5], mod(currentIndex + 3, N));
-            setRole(slots[5], "hidden-right");
-            slots[5].classList.add("no-transform-transition");
+            // 다음 hidden-right 준비 (오른쪽 바깥)
+            // ✅ hidden 준비는 항상 teleportTo로 처리(역방향으로 휙 움직이는 모션 방지)
+            teleportTo(slots[5], "hidden-right", mod(currentIndex + 3, N));
 
-            // 방향 클래스 정리
             carousel.classList.remove("direction-next");
             isTransitioning = false;
         }, DURATION);
     }
 
-    // ----------------------------
-    // 3) PREV (왼쪽 → 오른쪽으로 한 칸씩)
-    // ----------------------------
     function goPrev() {
         if (isTransitioning) return;
         isTransitioning = true;
@@ -2572,30 +3047,19 @@ function initNFTCarousel() {
         carousel.classList.remove("direction-next");
         carousel.classList.add("direction-prev");
 
-        // prev는 반대로:
-        // R2 -> hidden-right(out) - 텔레포트 필요
-        // R1 -> R2
-        // C  -> R1
-        // L1 -> C
-        // L2 -> L1
-        // hidden-left -> L2 (새로 등장)
-
-        // prev에서는 hidden 슬롯을 왼쪽에서 들어오게 준비해야 함
-        // slots[5]를 hidden-left로 재준비 (다음에 들어올 L2는 currentIndex-3)
+        // PREV: 왼쪽 → 오른쪽으로 한 칸씩
+        // prev에서는 hidden 슬롯을 왼쪽 바깥에서 들어오게 준비해야 함 (currentIndex-3)
         teleportTo(slots[5], "hidden-left", mod(currentIndex - 3, N));
 
-        // 한 칸씩 역할 이동
-        // R2는 오른쪽 끝에서 사라지므로 텔레포트로 처리
-        teleportTo(slots[4], "hidden-right");
-        setRole(slots[3], "next-next");                  // R1 -> R2
-        setRole(slots[2], "next");                       // C  -> R1
-        setRole(slots[1], "active");                     // L1 -> C
-        setRole(slots[0], "prev");                       // L2 -> L1
+        teleportTo(slots[4], "hidden-right");             // R2 out
+        setRole(slots[3], "next-next");                   // R1 -> R2
+        setRole(slots[2], "next");                        // C  -> R1
+        setRole(slots[1], "active");                      // L1 -> C
+        setRole(slots[0], "prev");                        // L2 -> L1
         slots[5].classList.remove("no-transform-transition");
-        setRole(slots[5], "prev-prev");                  // hidden -> L2
+        setRole(slots[5], "prev-prev");                   // hidden -> L2
 
         setTimeout(() => {
-            // 회전: 새 L2는 slots[5], 새 L1은 slots[0], 새 C는 slots[1], ...
             const oldHidden = slots[5];
             slots[5] = slots[4];
             slots[4] = slots[3];
@@ -2606,10 +3070,9 @@ function initNFTCarousel() {
 
             currentIndex = mod(currentIndex - 1, N);
 
-            // 다음을 위해 hidden-right 준비 (currentIndex+3)
-            render(slots[5], mod(currentIndex + 3, N));
-            setRole(slots[5], "hidden-right");
-            slots[5].classList.add("no-transform-transition");
+            // 다음 hidden-right 준비 (오른쪽 바깥)
+            // ✅ hidden 준비는 항상 teleportTo로 처리(역방향으로 휙 움직이는 모션 방지)
+            teleportTo(slots[5], "hidden-right", mod(currentIndex + 3, N));
 
             carousel.classList.remove("direction-prev");
             isTransitioning = false;
@@ -2617,14 +3080,13 @@ function initNFTCarousel() {
     }
 
     // ----------------------------
-    // 4) 버튼 이벤트
+    // 버튼 이벤트: 버튼/드래그 모두 동일한 전환 함수(goPrev/goNext) 사용
     // ----------------------------
     const prevBtn = document.querySelector(".nft-carousel-nav .prev-btn");
     const nextBtn = document.querySelector(".nft-carousel-nav .next-btn");
-
     if (prevBtn) {
         prevBtn.addEventListener("click", (e) => {
-            e.preventDefault();
+        e.preventDefault();
             e.stopPropagation();
             goPrev();
         });
@@ -2638,15 +3100,12 @@ function initNFTCarousel() {
     }
 
     // ----------------------------
-    // 5) 드래그 (영상 같은 방향)
-    //    오른쪽으로 드래그 => 이전(goPrev)
-    //    왼쪽으로 드래그   => 다음(goNext)
+    // 드래그: 버튼 클릭과 동일한 모션(릴리즈 시에만 전환)
     // ----------------------------
     let dragging = false;
     let startX = 0;
     let curX = 0;
     const TH = 60;
-
     const getX = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
 
     function dragStart(e) {
@@ -2659,24 +3118,25 @@ function initNFTCarousel() {
     function dragMove(e) {
         if (!dragging) return;
         curX = getX(e);
+        // ✅ 터치에서 가로 드래그 의도일 때만 페이지 스크롤 방지(버튼 클릭 모션 유지)
+        if (e && e.touches && Math.abs(curX - startX) > 6) e.preventDefault();
     }
     function dragEnd() {
         if (!dragging) return;
         dragging = false;
-
         const diff = curX - startX;
         if (Math.abs(diff) >= TH) {
-            // 왼쪽으로 드래그(음수) = 다음(Next, 오→왼 이동)
-            // 오른쪽으로 드래그(양수) = 이전(Prev, 왼→오 이동)
-            if (diff < 0) goNext();  // 왼쪽 드래그 = 다음
-            else goPrev();           // 오른쪽 드래그 = 이전
+            // 왼쪽으로 드래그(음수) = 다음(오→왼)
+            // 오른쪽으로 드래그(양수) = 이전(왼→오)
+            if (diff < 0) goNext();
+            else goPrev();
         }
     }
 
     carousel.addEventListener("mousedown", dragStart);
     carousel.addEventListener("touchstart", dragStart, { passive: true });
     document.addEventListener("mousemove", dragMove);
-    document.addEventListener("touchmove", dragMove, { passive: true });
+    document.addEventListener("touchmove", dragMove, { passive: false });
     document.addEventListener("mouseup", dragEnd);
     document.addEventListener("touchend", dragEnd);
 

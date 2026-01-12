@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SJ World - NFT Education Platform</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
+    <link rel="apple-touch-icon" href="img/favicon.png">
     <!-- 로컬 폰트 프리로드(초기 렌더링 안정화) -->
     <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
@@ -86,7 +90,7 @@
     </nav>
 
     <!-- 모바일(768px 이하) 전용: 하단 중앙 플로팅 발급 버튼 -->
-    <button class="mobile-issue-btn" type="button">NFT 발급하기</button>
+    <button class="mobile-issue-btn is-hidden" type="button">NFT 발급하기</button>
 
     <!-- ✅ 히어로~비전: 풀페이징(Swiper) -->
     <div class="hv-pager swiper" id="hvPager" aria-label="Hero and Vision paging">
@@ -159,6 +163,8 @@
 
             <!-- Slogan Slide -->
             <section class="vision-slide vision-slide-3 swiper-slide" id="slogan" aria-label="Slogan">
+                <!-- ✅ 슬로건 전용 풀스크린 배경 차단 레이어 (unlock 전까지 Structure 완전 가림) -->
+                <div class="slogan-fullscreen-blocker" aria-hidden="true"></div>
                 <div class="vision-text-3">
                     <h1 class="vision-title-3">
                         <span class="text-content">
@@ -489,6 +495,8 @@
                     </ul>
                 </div>
             </div>
+            <!-- ✅ 모바일 플로팅 버튼 노출 범위(roadmap 끝) 기준점 -->
+            <div class="roadmap-end-anchor" aria-hidden="true"></div>
         </div>
     </section>
 
