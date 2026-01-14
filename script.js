@@ -152,6 +152,11 @@ let hvSloganUnlockArmed = false;
 // - (중요) GNB 클릭 핸들러는 initHvPagerSwiper() 바깥 스코프이므로, 내부 const 함수에 의존하면 클릭이 먹통이 된다.
 // - 따라서 "Structure 스크롤 구간 활성화"는 전역 함수로 분리해서 어디서든 호출 가능하게 한다.
 function unlockToStructureScroll() {
+    // ✅ 다른 PC/첫 방문(캐시 없음)에서 빠른 스크롤 시 "바닥이 뚫려 보이는" 현상 방지
+    // - Structure~Footer 래퍼는 unlock 전에는 display:none이라, 브라우저가 그 안의 이미지 로드를 미루는 경우가 있음
+    // - 따라서 unlock 직전에 주요 이미지들을 선(先)프리로드로 캐시에 올려둔다.
+    try { preloadStructureAssets(); } catch (_) {}
+
     // ✅ unlock 상태로 즉시 전환 (이후 스크롤 이벤트가 정상 처리되도록)
     hvCanScrollToStructure = true;
     hvSloganUnlockArmed = false;
@@ -427,6 +432,13 @@ function applyHvPagerState(stepIndex, skipHeroMotion = false) {
     // - 2번 텍스트(슬라이드 2)에서 미리 이미지 src를 세팅해 캐시를 올려둠
     if (stepIndex === 2 || stepIndex === 3) {
         updateVisionImageSource();
+    }
+
+    // ✅ Structure/NFT 핵심 이미지 프리로드
+    // - unlock 순간에 처음 로드가 시작되면, 빠른 스크롤에서 빈 배경(검정/투명)이 보여 "바닥이 뚫려" 보일 수 있음
+    // - 비전2~슬로건 시점에 미리 캐시에 올려둔다.
+    if (stepIndex === 2 || stepIndex === 3) {
+        try { preloadStructureAssets(); } catch (_) {}
     }
 
     // 타이틀 애니메이션 재생
@@ -1986,6 +1998,69 @@ function preloadVisionAssets() {
 const VISION_IMAGE_DESKTOP_SRC = 'img/vision_sjw.jpg';
 const VISION_IMAGE_MOBILE_SRC = 'img/vision_sjw_m.jpg';
 let lastVisionImageSrc = null;
+
+// ---------------------------------------------------------------------
+// Structure/NFT 이미지 프리로드 (unlock 직후 "바닥 뚫림" 방지)
+// ---------------------------------------------------------------------
+function preloadStructureAssets() {
+    try {
+        // ✅ 중복 실행 방지
+        if (window.__SJW_STRUCTURE_ASSETS_PRELOADED__) return;
+        window.__SJW_STRUCTURE_ASSETS_PRELOADED__ = true;
+
+        // ✅ 빠른 스크롤에서 바로 보이는(또는 곧 보일) 핵심 이미지들만 선별
+        // - 너무 많은 리소스를 한 번에 preload 하면 초기 로딩이 무거워질 수 있어, 체감 이슈가 큰 것 위주로만 포함
+        const assets = [
+            // Structure 섹션 (상단에서 바로 노출)
+            'img/structure_01_nft.png',
+            'img/structure_02_dao.png',
+            'img/structure_03_tokken.png',
+
+            // NFT 카드 (스크롤 조금만 내려도 바로 노출)
+            'img/nft_01.png',
+            'img/nft_02.png',
+            'img/nft_03.png',
+            'img/nft_04.png',
+
+            // NFT 레벨 이미지 (용량이 큰 편이라 "뚫림"에 가장 영향)
+            'img/nft_level1.jpg',
+            'img/nft_level2.jpg',
+            'img/nft_level3.jpg',
+            'img/nft_level4.jpg',
+            'img/nft_level5.jpg'
+        ];
+
+        const head = document.head || document.getElementsByTagName('head')[0];
+
+        // ✅ 일부는 <link rel="preload">로 우선 힌트 제공 (지원 브라우저에서 효과)
+        const ensurePreload = (href) => {
+            if (!href || !head) return;
+            const selector = `link[rel="preload"][as="image"][href="${href}"]`;
+            if (head.querySelector(selector)) return;
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'image';
+            link.href = href;
+            head.appendChild(link);
+        };
+
+        // ✅ 구조 섹션 상단 아이콘은 우선순위가 높으므로 preload 힌트까지 제공
+        ensurePreload('img/structure_01_nft.png');
+        ensurePreload('img/structure_02_dao.png');
+        ensurePreload('img/structure_03_tokken.png');
+        ensurePreload('img/nft_level1.jpg');
+
+        // ✅ 실제 프리로드(캐시 적재): Image 객체로 네트워크 요청 트리거
+        assets.forEach((src) => {
+            const img = new Image();
+            img.decoding = 'async';
+            img.src = src;
+        });
+    } catch (e) {
+        // fail-safe: 프리로드 실패해도 기능에는 영향 없게
+        console.warn('[SJW] preloadStructureAssets failed:', e);
+    }
+}
 
 function updateVisionVideoSource(isActive) {
     // 비전이 활성화된 경우에만 소스를 교체 (불필요한 reload 방지)
