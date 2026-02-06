@@ -2612,6 +2612,21 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
 
 /* ✅ 1024~769(태블릿): 카드 폭(체감)을 0.9로 축소 */
 @media (min-width: 769px) and (max-width: 1024px) {
+    /* ✅ 태블릿: 카드 높이를 "가장 큰 카드"에 맞춰 통일 (JS가 --nft-card-fixed-height 주입) */
+    .nft-carousel {
+        height: var(--nft-card-fixed-height, var(--nft-carousel-height));
+    }
+
+    /* ✅ 태블릿: 캐러셀 ↔ 발급 버튼 영역 분리(겹침 방지) */
+    .nft-carousel-wrapper {
+        margin-bottom: clamp(2rem, 4vw, 3.25rem);
+    }
+
+    .nft-issue-btn-wrapper {
+        position: relative;
+        z-index: 30;
+    }
+
     .nft-card.active {
         transform: translate(-50%, -50%) scale(0.9);
     }
@@ -3456,6 +3471,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
 
     .nft-carousel {
         --nft-carousel-height: 500px;
+        /* ✅ 모바일: 카드 높이를 "가장 큰 카드"에 맞춰 통일 (JS가 --nft-card-fixed-height 주입) */
+        height: var(--nft-card-fixed-height, var(--nft-carousel-height));
     }
     
     .nft-card {

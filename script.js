@@ -676,6 +676,11 @@ function initHvPagerSwiper() {
 
     // 페이지 스크롤 상태에 따라 Swiper/페이지 락 동기화
     window.addEventListener('scroll', () => {
+        // ✅ 모달 오픈 중에는 HV(비전/슬로건) ↔ Structure 언락/락 동기화를 잠시 멈춘다.
+        // - 모달이 body fixed 락을 걸 때 일부 브라우저에서 scrollY가 0으로 튀는 순간이 있고,
+        //   그 순간 아래 로직이 hv-scroll-unlocked를 제거하면서 "바닥이 Vision으로 바뀌는" 현상이 발생할 수 있음.
+        if (document.body.classList.contains('sjw-modal-open')) return;
+
         const scrollY = window.pageYOffset || 0;
         
         // ✅ 슬로건 unlock 대기 중 + 스크롤 발생 → 즉시 unlock (모바일 자연스러운 스크롤)
@@ -1310,7 +1315,31 @@ document.addEventListener('DOMContentLoaded', () => {
         whitepaperSection ||
         document.querySelector('.roadmap-end-anchor') ||
         document.querySelector('#roadmap .roadmap-timeline');
-    const updateMobileIssueVisibility = () => {
+    // ✅ 성능 최적화: scroll마다 getBoundingClientRect() 호출하지 않도록
+    // - start/end absolute 좌표는 resize/레이아웃 변경 시에만 재계산
+    // - scroll에서는 y 비교만 수행 (rAF 1회)
+    let mobileIssueStartAbs = null;
+    let mobileIssueEndAbs = null;
+    let mobileIssueWpAbs = null;
+    let mobileIssueRaf = 0;
+
+    const recomputeMobileIssueBounds = () => {
+        if (!startEl || !endEl) return;
+        const y = window.pageYOffset || 0;
+        const startRect = startEl.getBoundingClientRect();
+        mobileIssueStartAbs = startRect.top + y;
+
+        const endRect = endEl.getBoundingClientRect();
+        mobileIssueEndAbs = (endEl.classList && endEl.classList.contains('roadmap-end-anchor'))
+            ? (endRect.top + y)
+            : (endRect.bottom + y);
+
+        mobileIssueWpAbs = whitepaperSection
+            ? (whitepaperSection.getBoundingClientRect().top + y)
+            : null;
+    };
+
+    const applyMobileIssueVisibility = () => {
         if (!mobileIssueBtn || !startEl || !endEl) return;
 
         // 768px 이하에서만 제어
@@ -1320,30 +1349,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (mobileIssueStartAbs == null || mobileIssueEndAbs == null) {
+            recomputeMobileIssueBounds();
+            if (mobileIssueStartAbs == null || mobileIssueEndAbs == null) return;
+        }
+
         const y = window.pageYOffset || 0;
-        const startTop = startEl.getBoundingClientRect().top + y;
 
-        // ✅ 화이트페이퍼에서 계속 보이는 케이스 방지:
-        // - endTop 절대좌표 비교가 환경에 따라 흔들릴 수 있어,
-        //   whitepaper가 뷰포트에 "진입"하면 무조건 숨김 처리(가장 확실)
-        const wpHideBufferPx = 80; // 화이트페이퍼 진입 전 여유(필요 시 미세조정)
-        const wpEntered = !!whitepaperSection && (whitepaperSection.getBoundingClientRect().top <= (window.innerHeight - wpHideBufferPx));
+        // ✅ 화이트페이퍼 진입 시 무조건 숨김(가장 확실)
+        const wpHideBufferPx = 80;
+        const wpEntered = (mobileIssueWpAbs != null) && (y >= (mobileIssueWpAbs - (window.innerHeight - wpHideBufferPx)));
 
-        // endEl이 타임라인인 경우: bottom 기준, anchor인 경우: top 기준
-        const endRect = endEl.getBoundingClientRect();
-        const endTop = (endEl.classList && endEl.classList.contains('roadmap-end-anchor'))
-            ? (endRect.top + y)
-            : (endRect.bottom + y);
-
-        const inRange = (y >= (startTop - 1)) && !wpEntered && (y < (endTop - 1));
-
+        const inRange = (y >= (mobileIssueStartAbs - 1)) && !wpEntered && (y < (mobileIssueEndAbs - 1));
         if (inRange) {
             mobileIssueBtn.classList.remove('is-hidden');
-        mobileIssueBtn.classList.remove('is-faded');
+            mobileIssueBtn.classList.remove('is-faded');
         } else {
-            // ✅ 범위 밖에서는 완전 숨김(클릭/터치 불가)
             mobileIssueBtn.classList.add('is-hidden');
         }
+    };
+
+    const updateMobileIssueVisibility = () => {
+        if (mobileIssueRaf) return;
+        mobileIssueRaf = requestAnimationFrame(() => {
+            mobileIssueRaf = 0;
+            applyMobileIssueVisibility();
+        });
     };
 
     const handleResize = () => {
@@ -1351,9 +1382,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.innerWidth > 768) {
             closeMobileMenu();
         }
+        recomputeMobileIssueBounds();
         updateMobileIssueVisibility();
     };
 
+    recomputeMobileIssueBounds();
     updateMobileIssueVisibility();
     window.addEventListener('scroll', updateMobileIssueVisibility, { passive: true });
     window.addEventListener('resize', handleResize);
@@ -2812,6 +2845,34 @@ function initNFTLevelDetailsModal() {
 
     if (!modal || !closeBtn || !triggers.length) return;
 
+    // ✅ overlay는 현재 .structure-to-footer-wrapper 내부에 위치하지만,
+    // 그 부모에 transform이 걸려있으면 일부 브라우저에서 position:fixed 기준이 "viewport"가 아니라
+    // "transform 부모"로 바뀌어 모달이 화면 밖으로 밀려 보이지 않을 수 있다.
+    // → 안전하게 body 직속으로 마운트해서 항상 viewport 기준으로 보이게 한다.
+    const originalParent = overlay.parentElement;
+    const originalNextSibling = overlay.nextSibling;
+    const mountOverlayToBody = () => {
+        if (overlay.parentElement !== document.body) {
+            document.body.appendChild(overlay);
+        }
+    };
+    const restoreOverlayMount = () => {
+        if (!originalParent) return;
+        if (overlay.parentElement === originalParent) return;
+        // body에 붙어있다면 원래 자리로 복원
+        if (overlay.parentElement === document.body) {
+            try {
+                if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+                    originalParent.insertBefore(overlay, originalNextSibling);
+                } else {
+                    originalParent.appendChild(overlay);
+                }
+            } catch (_) {
+                originalParent.appendChild(overlay);
+            }
+        }
+    };
+
     const FADE_MS = 220; // CSS transition 시간과 맞춤
     let lastFocusedEl = null;
     /**
@@ -2820,72 +2881,96 @@ function initNFTLevelDetailsModal() {
      * - 모달 내부(.nft-level-modal-body)에서만 스크롤 가능
      *
      * ✅ 구현
-     * - iOS/Safari에서도 안정적인 방식: body를 fixed로 고정(현재 화면을 그대로 유지)
-     * - 닫을 때는 같은 위치로 즉시 복원(시점 점프/이동 방지)
+     * - (중요) 태블릿/iOS에서 body fixed 락은 클릭 순간 스크롤이 튀며
+     *   "NFT 섹션 최상단으로 이동"하는 케이스가 있어, position:fixed는 사용하지 않는다.
+     * - 대신 overflow:hidden + wheel/touchmove 캡처 차단으로 "현재 화면 그대로" 유지
      */
-    let didFixedLock = false;
     let lockedY = 0;
     const prevLockStyles = {
-        bodyOverflow: '',
-        bodyPosition: '',
-        bodyPosition: '',
-        bodyTop: '',
-        bodyLeft: '',
-        bodyRight: '',
-        bodyWidth: ''
+        bodyOverscrollBehavior: ''
+    };
+    let pinScrollRaf = 0;
+    let pinScrollFramesLeft = 0;
+
+    const startPinScroll = () => {
+        if (pinScrollRaf) cancelAnimationFrame(pinScrollRaf);
+        pinScrollFramesLeft = 10; // iOS에서 2~3프레임 늦게 튀는 케이스 대응
+        const tick = () => {
+            if (!overlay.classList.contains('is-open')) return;
+            const curY = window.scrollY || window.pageYOffset || 0;
+            if (Math.abs(curY - lockedY) > 1) {
+                // overflow를 건드리지 않으므로 programmatic scroll 복원이 항상 먹는다
+                if (typeof scrollToInstantGlobal === 'function') scrollToInstantGlobal(lockedY);
+                else window.scrollTo(0, lockedY);
+            }
+            pinScrollFramesLeft -= 1;
+            if (pinScrollFramesLeft > 0) {
+                pinScrollRaf = requestAnimationFrame(tick);
+            } else {
+                pinScrollRaf = 0;
+            }
+        };
+        pinScrollRaf = requestAnimationFrame(tick);
+    };
+
+    // 모달 오픈 중 배경 스크롤 완전 차단(모달 body 내부만 허용)
+    const blockBackgroundScroll = (e) => {
+        // 모달이 열려있을 때만 가드
+        if (!overlay.classList.contains('is-open')) return;
+        // 모달 내부 스크롤 영역은 허용
+        if (e.target && e.target.closest && e.target.closest('.nft-level-modal-body')) return;
+        e.preventDefault();
     };
 
     const lockScroll = () => {
         // 다른 기능(예: 모바일 메뉴)에서 이미 fixed 잠금이면 건드리지 않음
-        if (document.body.style.position === 'fixed') {
-            didFixedLock = false;
-            return;
-        }
-        didFixedLock = true;
+        if (document.body.style.position === 'fixed') return;
+
         lockedY = window.scrollY || window.pageYOffset || 0;
 
-        prevLockStyles.bodyOverflow = document.body.style.overflow;
-        prevLockStyles.bodyPosition = document.body.style.position;
-        prevLockStyles.bodyTop = document.body.style.top;
-        prevLockStyles.bodyLeft = document.body.style.left;
-        prevLockStyles.bodyRight = document.body.style.right;
-        prevLockStyles.bodyWidth = document.body.style.width;
+        prevLockStyles.bodyOverscrollBehavior = document.body.style.overscrollBehavior;
 
-        // ✅ 바닥 화면은 그대로 유지(시점 점프 방지): html은 건드리지 않고 body만 fixed 처리
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${lockedY}px`;
-        document.body.style.left = '0';
-        document.body.style.right = '0';
-        document.body.style.width = '100%';
+        // ✅ 현재 화면 위치를 절대 바꾸지 않기 위해 overflow/height는 건드리지 않는다.
+        // 배경 스크롤 차단은 wheel/touchmove 캡처 차단으로 처리.
+        document.body.style.overscrollBehavior = 'none';
+
+        // wheel/touchmove는 캡처 단계에서 차단(모달 내부는 예외)
+        document.addEventListener('wheel', blockBackgroundScroll, { passive: false, capture: true });
+        document.addEventListener('touchmove', blockBackgroundScroll, { passive: false, capture: true });
     };
 
     const unlockScroll = () => {
-        if (!didFixedLock) return;
-        document.body.style.overflow = prevLockStyles.bodyOverflow;
-        document.body.style.position = prevLockStyles.bodyPosition;
-        document.body.style.top = prevLockStyles.bodyTop;
-        document.body.style.left = prevLockStyles.bodyLeft;
-        document.body.style.right = prevLockStyles.bodyRight;
-        document.body.style.width = prevLockStyles.bodyWidth;
+        // 다른 fixed 잠금이 걸려 있던 경우 건드리지 않음
+        if (document.body.style.position === 'fixed') return;
 
-        // ✅ 같은 위치로 "즉시" 복원(보던 화면 그대로)
-        if (typeof scrollToInstantGlobal === 'function') {
-            scrollToInstantGlobal(lockedY);
-        } else {
-            window.scrollTo(0, lockedY);
+        document.removeEventListener('wheel', blockBackgroundScroll, { capture: true });
+        document.removeEventListener('touchmove', blockBackgroundScroll, { capture: true });
+
+        document.body.style.overscrollBehavior = prevLockStyles.bodyOverscrollBehavior;
+
+        // ✅ 혹시라도 열린 동안 스크롤이 움직였다면, 원위치로 즉시 복원
+        const curY = window.scrollY || window.pageYOffset || 0;
+        if (Math.abs(curY - lockedY) > 1) {
+            if (typeof scrollToInstantGlobal === 'function') scrollToInstantGlobal(lockedY);
+            else window.scrollTo(0, lockedY);
         }
         lockedY = 0;
-        didFixedLock = false;
     };
 
     const open = () => {
         lastFocusedEl = document.activeElement;
+        // ✅ 모달 오픈 동안 HV 스크롤 동기화를 일시 중단 (바닥 콘텐츠 유지)
+        document.body.classList.add('sjw-modal-open');
+        // ✅ fixed 기준 안정화: 먼저 body 직속으로 옮긴 뒤 표시
+        mountOverlayToBody();
         overlay.removeAttribute('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         lockScroll();
         requestAnimationFrame(() => {
             overlay.classList.add('is-open');
+            // ✅ iOS에서 오픈 직후(또는 몇 프레임 뒤) scrollY가 0으로 튀며
+            // hv-pager(슬로건)가 배경에 비칠 수 있어, 짧게 scroll을 핀ning
+            startPinScroll();
             // ✅ 일부 브라우저에서 focus가 스크롤 점프를 유발하는 케이스가 있어
             // "시점 이동 0"을 최우선으로 하여 오픈 시 자동 포커스 이동은 하지 않음
             // (필요 시 접근성 개선 단계에서 focus trap 추가)
@@ -2898,9 +2983,15 @@ function initNFTLevelDetailsModal() {
         // 페이드 아웃 후 hidden 처리
         window.setTimeout(() => {
             overlay.setAttribute('hidden', '');
+            // ✅ 닫힌 뒤에는 원래 마운트 위치로 복원(레이아웃/구조 유지)
+            restoreOverlayMount();
         }, FADE_MS);
         // ✅ 스크롤 복원 → 다음 프레임에 포커스 복원(포커스가 스크롤을 유발하는 브라우저 대응)
         unlockScroll();
+        // ✅ unlockScroll(스크롤 복원) 직후 1프레임은 scroll 이벤트가 튈 수 있어, 다음 프레임에 해제
+        requestAnimationFrame(() => {
+            document.body.classList.remove('sjw-modal-open');
+        });
         const toFocus = lastFocusedEl;
         lastFocusedEl = null;
         if (toFocus && typeof toFocus.focus === 'function') {
@@ -2976,6 +3067,97 @@ function initNFTCarousel() {
     const mod = (a, b) => ((a % b) + b) % b;
     let currentIndex = 0; // 중앙(C)의 데이터 index
     let isTransitioning = false;
+    let heightSyncRaf = 0;
+    let heightSyncTimer = 0;
+    let globalFixedHeightPx = 0;
+    let lastMeasuredWidth = 0;
+    let lastResizeInnerWidth = window.innerWidth || 0;
+
+    // -----------------------------------------------------------------
+    // ✅ 1024px 이하(태블릿/모바일): "가장 큰 카드 높이"로 카드/캐러셀 높이 통일
+    // - 텍스트 줄바꿈에 따라 카드 높이가 들쑥날쑥해지는 문제 해결
+    // - 캐러셀 wrapper의 flow 높이도 같이 확보되어 nft-issue-btn과 겹침 방지
+    // -----------------------------------------------------------------
+    function computeAndApplyNftCarouselFixedHeight() {
+        const shouldSync = window.matchMedia && window.matchMedia('(max-width: 1024px)').matches;
+        if (!shouldSync) {
+            carousel.style.removeProperty('--nft-card-fixed-height');
+            globalFixedHeightPx = 0;
+            lastMeasuredWidth = 0;
+            return;
+        }
+
+        // ✅ 레이아웃이 아직 잡히지 않았거나(display:none 상태) 폭이 0이면 측정 불가
+        const width = carousel.getBoundingClientRect().width;
+        if (!Number.isFinite(width) || width < 10) return;
+
+        // ✅ 같은 폭이면 이미 계산한 높이를 그대로 사용(이동 시 "사이즈가 살짝 바뀌는" 느낌 방지)
+        if (globalFixedHeightPx > 0 && Math.abs(width - lastMeasuredWidth) < 1) {
+            carousel.style.setProperty('--nft-card-fixed-height', `${globalFixedHeightPx}px`);
+            return;
+        }
+        lastMeasuredWidth = width;
+
+        // ✅ 모든 카드(템플릿) 중 최대 높이를 1회 계산 → 이동/전환 중 높이 변동 제거
+        // - 기존: 현재 보이는 카드 기준으로 계산 → 이동 후 다시 계산되며 카드 사이즈가 미세하게 변하는 느낌 발생
+        // - 개선: 전체 카드 중 최대값을 고정값으로 사용(요구사항: 가장 큰 카드 기준으로 통일)
+        const host = document.createElement('div');
+        host.style.position = 'absolute';
+        host.style.left = '-100000px';
+        host.style.top = '0';
+        host.style.width = `${width}px`;
+        host.style.visibility = 'hidden';
+        host.style.pointerEvents = 'none';
+        host.style.contain = 'layout style paint';
+        document.body.appendChild(host);
+
+        let maxH = 0;
+        for (let i = 0; i < templates.length; i++) {
+            const card = document.createElement('div');
+            // active 기준 레이아웃(태블릿/모바일에서 "보이는 카드"와 동일 레이아웃)
+            card.className = 'nft-card active';
+            // 기존 .nft-card의 absolute/transform이 측정을 방해하지 않도록 inline override
+            card.style.position = 'relative';
+            card.style.top = 'auto';
+            card.style.left = 'auto';
+            card.style.transform = 'none';
+            card.style.opacity = '1';
+            card.style.pointerEvents = 'none';
+            card.style.width = '100%';
+            card.style.maxWidth = '100%';
+
+            card.innerHTML = templates[i];
+            host.appendChild(card);
+
+            // 레이아웃 확정 후 실제 높이 측정
+            const h = card.getBoundingClientRect().height;
+            if (h > maxH) maxH = h;
+        }
+
+        host.remove();
+
+        if (maxH > 0) {
+            // 1~2px 여유(폰트/서브픽셀 라운딩)로 미세한 잘림 방지
+            const fixed = Math.ceil(maxH + 2);
+            globalFixedHeightPx = fixed;
+            carousel.style.setProperty('--nft-card-fixed-height', `${globalFixedHeightPx}px`);
+        }
+    }
+
+    function scheduleNftCarouselHeightSync() {
+        if (heightSyncRaf) cancelAnimationFrame(heightSyncRaf);
+        if (heightSyncTimer) clearTimeout(heightSyncTimer);
+
+        heightSyncRaf = requestAnimationFrame(() => {
+            heightSyncRaf = 0;
+            computeAndApplyNftCarouselFixedHeight();
+            // 이미지/폰트 로딩 이후 한번 더(캐시/네트워크 모두 대응)
+            heightSyncTimer = setTimeout(() => {
+                heightSyncTimer = 0;
+                computeAndApplyNftCarouselFixedHeight();
+            }, 160);
+        });
+    }
 
     function setRole(el, role) {
         el.classList.remove(
@@ -3040,6 +3222,13 @@ function initNFTCarousel() {
     function render(el, dataIndex) {
         el.innerHTML = templates[dataIndex];
         el.dataset.index = String(dataIndex);
+
+        // 이미지 로드로 카드 높이가 변할 수 있으므로, 1024↓에서는 로드 완료 시 높이 재동기화
+        const img = el.querySelector('.nft-card-image');
+        if (img && !img.complete) {
+            img.addEventListener('load', scheduleNftCarouselHeightSync, { once: true });
+            img.addEventListener('error', scheduleNftCarouselHeightSync, { once: true });
+        }
     }
 
     // ✅ 텔레포트(순간 이동): 역방향으로 "가로지르는" 모션이 보이지 않도록 transition을 끄고 위치만 바꾼다
@@ -3073,6 +3262,9 @@ function initNFTCarousel() {
 
         // CSS 적용 강제
         carousel.offsetHeight;
+        // ✅ 첫 진입(IntersectionObserver로 reveal / display:none→block 전환)에서도 겹침 방지
+        // - 레이아웃이 잡힌 프레임에서 최대 높이를 계산해 컨테이너 높이를 확보한다.
+        scheduleNftCarouselHeightSync();
     }
 
     // styles.css transition(0.45s)과 동일
@@ -3081,6 +3273,10 @@ function initNFTCarousel() {
     function goNext() {
         if (isTransitioning) return;
         isTransitioning = true;
+
+        // ✅ 이동 시작 전에 "전체 최대 높이"를 확정해두면
+        // 이동 후에 높이가 재계산되며 카드가 살짝 커졌다/작아졌다 하는 느낌이 사라진다.
+        computeAndApplyNftCarouselFixedHeight();
 
         carousel.classList.remove("direction-prev");
         carousel.classList.add("direction-next");
@@ -3118,6 +3314,9 @@ function initNFTCarousel() {
     function goPrev() {
         if (isTransitioning) return;
         isTransitioning = true;
+
+        // ✅ 이동 시작 전에 "전체 최대 높이"를 확정
+        computeAndApplyNftCarouselFixedHeight();
 
         carousel.classList.remove("direction-next");
         carousel.classList.add("direction-prev");
@@ -3217,6 +3416,43 @@ function initNFTCarousel() {
 
     // 시작
     layoutInitial();
+
+    // 리사이즈/회전 시에도 카드 높이 재동기화
+    // ✅ iOS/모바일 브라우저는 스크롤 중 주소창 변화로 "height만" 바뀌며 resize가 연속 발생할 수 있음
+    // - 이때 높이 동기화가 계속 스케줄되면 스크롤이 느려지는(지연/버벅임) 느낌이 생길 수 있다.
+    // - 카드 높이 동기화는 "가로폭"이 바뀔 때만 필요하므로 innerWidth 변화가 없으면 무시한다.
+    const onResize = () => {
+        const w = window.innerWidth || 0;
+        if (w === lastResizeInnerWidth) return;
+        lastResizeInnerWidth = w;
+        scheduleNftCarouselHeightSync();
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('orientationchange', () => scheduleNftCarouselHeightSync(), { passive: true });
+
+    // ✅ NFT 섹션 "첫 진입" 시점(IntersectionObserver로 slide-in.visible 부여)에 맞춰 재동기화
+    // - Structure wrapper가 unlock 전에는 display:none인 경우가 있어, 초기 DOMContentLoaded 측정이 0이 될 수 있음
+    // - 실제로 화면에 등장하는 순간에 한 번 더 확정하면 버튼/카드 겹침이 사라진다.
+    const revealTarget = carousel.closest('.nft-carousel-wrapper') || document.querySelector('.nft-section');
+    if (revealTarget && 'IntersectionObserver' in window) {
+        const revealObs = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    scheduleNftCarouselHeightSync();
+                    // ✅ 첫 진입 1회만 실행 (스크롤 중 반복 실행되어 느려지는 현상 방지)
+                    try { revealObs.disconnect(); } catch (_) {}
+                }
+            });
+        }, { threshold: 0.01 });
+        revealObs.observe(revealTarget);
+    }
+
+    // 폰트 로딩 완료 후에도 1회 재동기화(초기 1~2프레임 차이 방지)
+    try {
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => scheduleNftCarouselHeightSync());
+        }
+    } catch (_) {}
 }
 
 // NFT 레벨 페이지네이션 기능
