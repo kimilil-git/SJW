@@ -931,19 +931,30 @@ body.hv-scroll-unlocked .slogan-fullscreen-blocker {
     z-index: -1 !important;
 }
 
-/* ✅ HV 구간에서는 body의 최소 높이를 100vh로 고정하여
-   Structure가 물리적으로 뷰포트 밖에 위치하도록 강제 */
-/* ✅ 모바일에서는 이 규칙을 적용하지 않음 (visualViewport 계산에 영향을 줄 수 있음) */
+/* ✅ HV 구간에서는 body를 overflow: hidden으로 잠가 가로/세로 스크롤 모두 차단
+   - 모든 해상도에 적용: dev tools 해상도 전환 시에도 스크롤 잠금이 유지되도록 */
+body:not(.hv-scroll-unlocked) {
+    overflow: hidden !important;
+}
+
+/* ✅ 데스크탑(769px 이상)에서만 min/max-height 고정
+   - 모바일에서는 min/max-height를 건드리지 않아 visualViewport 계산 방해 방지 */
 @media (min-width: 769px) {
     body:not(.hv-scroll-unlocked) {
         min-height: 100vh;
         max-height: 100vh;
-        overflow: hidden !important;
     }
 
     body.hv-scroll-unlocked {
         min-height: unset;
         max-height: unset;
+        overflow: visible !important;
+    }
+}
+
+/* ✅ 모바일에서 unlock 후 overflow 복원 (데스크탑 media query가 적용 안 되므로 별도 처리) */
+@media (max-width: 768px) {
+    body.hv-scroll-unlocked {
         overflow: visible !important;
     }
 }
@@ -3068,6 +3079,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     -webkit-overflow-scrolling: touch;
     position: relative;
     z-index: 1;
+    /* ✅ 모달 내부 스크롤이 끝에 도달해도 배경 콘텐츠로 스크롤 전달(chaining) 방지 */
+    overscroll-behavior: contain;
 }
 
 /* ✅ 모바일: 스크롤 끝에서 콘텐츠가 가려지지 않도록 바디 하단 여백 확보 */
