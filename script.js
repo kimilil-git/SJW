@@ -169,6 +169,10 @@ function unlockToStructureScroll() {
     if (structureWrapper) {
         structureWrapper.style.display = '';
     }
+    // ✅ 모바일 플로팅 발급 버튼: bounds 캐시를 "unlock 이후" 다시 계산해야 함
+    // - unlock 전에는 structureWrapper가 display:none이라 getBoundingClientRect()가 0으로 나오는 케이스가 있음
+    try { window.__sjwMobileIssueRecomputeBounds?.(); } catch (_) {}
+    try { window.__sjwMobileIssueUpdate?.(); } catch (_) {}
     // ✅ Swiper/페이지 락 동기화
     syncHvSwiperMousewheelWithPageScroll();
     // ✅ 혹시 남아있는 스크롤 락(overflow hidden / body fixed)을 강제로 해제
@@ -1390,6 +1394,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMobileIssueVisibility();
     window.addEventListener('scroll', updateMobileIssueVisibility, { passive: true });
     window.addEventListener('resize', handleResize);
+
+    // ✅ unlockToStructureScroll()에서 호출할 수 있도록 전역으로 노출
+    window.__sjwMobileIssueRecomputeBounds = recomputeMobileIssueBounds;
+    window.__sjwMobileIssueUpdate = updateMobileIssueVisibility;
 
     // ✅ Hero(최상단)에서 pull-to-refresh가 가능하도록: 스와이프 구간에서 페이지가 내려가 버리는 것을 방지
     // - Hero/비전 구간에서는 원칙적으로 pageYOffset이 0이어야 함(Structure는 slogan unlock 이후)
@@ -3072,6 +3080,9 @@ function initNFTCarousel() {
     let globalFixedHeightPx = 0;
     let lastMeasuredWidth = 0;
     let lastResizeInnerWidth = window.innerWidth || 0;
+    let fixedHeightFinalized = false;
+    let pendingVisibleImgLoads = 0;
+    let hasAppliedFixedHeight = false;
 
     // -----------------------------------------------------------------
     // ✅ 1024px 이하(태블릿/모바일): "가장 큰 카드 높이"로 카드/캐러셀 높이 통일
@@ -3084,6 +3095,8 @@ function initNFTCarousel() {
             carousel.style.removeProperty('--nft-card-fixed-height');
             globalFixedHeightPx = 0;
             lastMeasuredWidth = 0;
+            fixedHeightFinalized = false;
+            hasAppliedFixedHeight = false;
             return;
         }
 
@@ -3092,11 +3105,27 @@ function initNFTCarousel() {
         if (!Number.isFinite(width) || width < 10) return;
 
         // ✅ 같은 폭이면 이미 계산한 높이를 그대로 사용(이동 시 "사이즈가 살짝 바뀌는" 느낌 방지)
-        if (globalFixedHeightPx > 0 && Math.abs(width - lastMeasuredWidth) < 1) {
+        // 단, 이미지 로딩 전에는 높이 측정이 흔들릴 수 있으므로 "finalized" 이후에만 캐시를 고정한다.
+        if (fixedHeightFinalized && pendingVisibleImgLoads === 0 && globalFixedHeightPx > 0 && Math.abs(width - lastMeasuredWidth) < 1) {
             carousel.style.setProperty('--nft-card-fixed-height', `${globalFixedHeightPx}px`);
             return;
         }
         lastMeasuredWidth = width;
+
+        // ✅ 모바일 첫 진입/새로고침: 이미지가 아직 로드 중이면
+        // - 너무 작은 높이로 먼저 고정되면 이미지가 클리핑되어 "안 보이는" 현상이 생길 수 있음
+        // - 반대로 너무 큰 높이(기본 500px)는 UX상 허용 가능
+        // → 이미지 로드가 끝날 때까지는 fixed-height를 '적용하지 않거나'(초기) '유지'(이미 적용된 경우)만 한다.
+        if (pendingVisibleImgLoads > 0) {
+            if (hasAppliedFixedHeight && globalFixedHeightPx > 0) {
+                carousel.style.setProperty('--nft-card-fixed-height', `${globalFixedHeightPx}px`);
+            } else {
+                // 아직 fixed-height를 적용하지 않았다면 CSS 기본(--nft-carousel-height)로 렌더
+                carousel.style.removeProperty('--nft-card-fixed-height');
+            }
+            fixedHeightFinalized = false;
+            return;
+        }
 
         // ✅ 모든 카드(템플릿) 중 최대 높이를 1회 계산 → 이동/전환 중 높이 변동 제거
         // - 기존: 현재 보이는 카드 기준으로 계산 → 이동 후 다시 계산되며 카드 사이즈가 미세하게 변하는 느낌 발생
@@ -3139,8 +3168,10 @@ function initNFTCarousel() {
         if (maxH > 0) {
             // 1~2px 여유(폰트/서브픽셀 라운딩)로 미세한 잘림 방지
             const fixed = Math.ceil(maxH + 2);
+            // ✅ 이미지 로드 완료 후에는 실제 콘텐츠 기준으로 줄어들어도 OK
             globalFixedHeightPx = fixed;
             carousel.style.setProperty('--nft-card-fixed-height', `${globalFixedHeightPx}px`);
+            hasAppliedFixedHeight = true;
         }
     }
 
@@ -3151,10 +3182,13 @@ function initNFTCarousel() {
         heightSyncRaf = requestAnimationFrame(() => {
             heightSyncRaf = 0;
             computeAndApplyNftCarouselFixedHeight();
+            // ✅ 보이는 카드들의 이미지가 모두 로드된 상태면 이제 높이를 고정해도 안전
+            if (pendingVisibleImgLoads === 0 && hasAppliedFixedHeight) fixedHeightFinalized = true;
             // 이미지/폰트 로딩 이후 한번 더(캐시/네트워크 모두 대응)
             heightSyncTimer = setTimeout(() => {
                 heightSyncTimer = 0;
                 computeAndApplyNftCarouselFixedHeight();
+                if (pendingVisibleImgLoads === 0 && hasAppliedFixedHeight) fixedHeightFinalized = true;
             }, 160);
         });
     }
@@ -3226,8 +3260,15 @@ function initNFTCarousel() {
         // 이미지 로드로 카드 높이가 변할 수 있으므로, 1024↓에서는 로드 완료 시 높이 재동기화
         const img = el.querySelector('.nft-card-image');
         if (img && !img.complete) {
-            img.addEventListener('load', scheduleNftCarouselHeightSync, { once: true });
-            img.addEventListener('error', scheduleNftCarouselHeightSync, { once: true });
+            pendingVisibleImgLoads += 1;
+            fixedHeightFinalized = false;
+            const done = () => {
+                pendingVisibleImgLoads = Math.max(0, pendingVisibleImgLoads - 1);
+                // 로드 완료 시점에 한 번 더 동기화(이미지 높이 반영)
+                scheduleNftCarouselHeightSync();
+            };
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
         }
     }
 

@@ -1655,7 +1655,10 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     position: relative;
     width: 100%; /* 자동 너비 조절 */
     max-width: 100%;
-    height: 560px;
+    /* ✅ 텍스트 길이가 길어져도 카드 밖으로 넘치지 않도록:
+       기본 높이는 유지하되(디자인 유지), 콘텐츠가 더 길면 카드가 자연스럽게 늘어나게 한다. */
+    min-height: 560px;
+    height: auto;
     /* 기본 fallback (구형 브라우저): 40px */
     --structure-card-radius: 40px;
     --structure-card-outline: 1.2px; /* 그라데이션 아웃라인 두께 */
@@ -1860,6 +1863,9 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     flex-direction: column;
     align-items: center;
     gap: 0;
+    /* ✅ flex row(태블릿)에서 텍스트가 줄바꿈되지 않고 박스 밖으로 밀리는 현상 방지 */
+    min-width: 0;
+    max-width: 100%;
 }
 
 .card-text-group h3 {
@@ -1868,6 +1874,10 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     margin-bottom: 1rem;
     letter-spacing: -0.03125rem;
     color: rgba(255, 255, 255, 1);
+    max-width: 100%;
+    /* ✅ "Contribution/Participation" 같은 긴 단어/슬래시 조합도 카드 안에서 줄바꿈 허용 */
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .card-text-group p {
@@ -1878,6 +1888,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     color: rgba(255, 255, 255, 0.85);
     word-break: keep-all;
     margin: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 /* NFT Section */
@@ -4113,23 +4125,31 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     overflow-wrap: normal;
 }
 
-/* ✅ footer-link 내부 텍스트는 flex에서 축소 가능해야(769~951 구간 간격 이슈 해결) */
+/* footer-link 내부 텍스트 */
 .footer-link-text {
     display: block;
     min-width: 0;
     flex: 0 1 auto;
 }
 
-/* 외부링크/Top처럼 아이콘이 붙는 링크는 텍스트가 더 잘 줄어들게 */
-.footer-link-external .footer-link-text,
-.footer-link-top .footer-link-text {
-    flex: 1 1 auto;
+/* 외부링크/Top은 텍스트와 아이콘이 절대 분리되지 않도록 */
+.footer-link-external,
+.footer-link-top {
+    white-space: nowrap;    /* 텍스트+아이콘 줄바꿈 방지 */
+    flex-wrap: nowrap;
+    gap: 6px;               /* 텍스트와 아이콘 고정 간격 */
 }
 
-/* 외부링크 아이콘은 첫 줄 기준으로 정렬(줄바꿈 전 간격/정렬 유지) */
+.footer-link-external .footer-link-text,
+.footer-link-top .footer-link-text {
+    flex: 0 0 auto;         /* 텍스트가 늘어나거나 줄어들지 않도록 고정 */
+}
+
+/* 외부링크 아이콘은 첫 줄 기준으로 정렬 */
 .footer-link-icon {
     align-self: flex-start;
-    margin-top: 0.15em; /* 시각적으로 첫 줄 베이스라인에 맞춤 */
+    margin-top: 0.15em;
+    flex-shrink: 0;         /* 아이콘 절대 축소 방지 */
 }
 
 .footer-link:hover {
@@ -4222,7 +4242,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
 }
 
 /* 반응형 디자인 */
-@media (max-width: 768px) {
+/* 푸터 메뉴가 줄바꿈되는 시점(~960px)부터 column 레이아웃으로 전환 */
+@media (max-width: 960px) {
     .footer-content {
         flex-direction: column;
         align-items: flex-start;
@@ -4234,6 +4255,15 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
         width: 100%;
     }
     
+    .footer-nav {
+        flex-direction: row;    /* 가로 유지하되 줄바꿈 허용 */
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 12px 2rem;         /* 세로 12px, 가로 2rem */
+    }
+}
+
+@media (max-width: 768px) {
     .footer-nav {
         flex-direction: column; /* 모바일에서는 세로배열 */
         align-items: flex-start;
@@ -4306,7 +4336,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
     .structure-card .card-text-group {
         align-items: flex-start;
         text-align: left;
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        min-width: 0; /* ✅ 텍스트 줄바꿈/넘침 방지 */
     }
 }
 
@@ -4359,6 +4390,8 @@ body.hv-scroll-unlocked .structure-to-footer-wrapper {
         width: 100%;
         max-width: 100%;
         height: auto;
+        /* ✅ 모바일: 기본 min-height(560px) 때문에 카드가 과하게 길어 보이는 현상 방지 */
+        min-height: 0;
     }
     
     .structure-card .crystal-img {

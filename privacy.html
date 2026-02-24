@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개인정보 처리방침 - SJ World</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
+    <link rel="apple-touch-icon" href="img/favicon.png">
+    <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* styles.css의 hv-scroll 잠금을 정책 페이지에서 해제 */
+        body {
+            background: #05061E;
+            color: #fff;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
+        }
+
+        .policy-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 140px 5vw 100px;
+        }
+
+        .policy-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .policy-date {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 64px;
+        }
+
+        .policy-intro {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 64px;
+            padding: 28px 32px;
+            background: rgba(255,255,255,0.04);
+            border-left: 3px solid rgba(255,255,255,0.2);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .policy-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.12);
+            margin-bottom: 56px;
+        }
+
+        .policy-section {
+            margin-bottom: 52px;
+        }
+
+        .policy-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .policy-text {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .policy-text + .policy-text {
+            margin-top: 10px;
+        }
+
+        .policy-list {
+            margin: 10px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-list li {
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: rgba(255,255,255,0.7);
+            padding-left: 1.3em;
+            position: relative;
+        }
+
+        .policy-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .policy-list.ordered {
+            counter-reset: item;
+        }
+
+        .policy-list.ordered > li {
+            counter-increment: item;
+            padding-left: 1.6em;
+        }
+
+        .policy-list.ordered > li::before {
+            content: counter(item) ".";
+            font-weight: 600;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .policy-sublist {
+            margin: 6px 0 6px 1.2em;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-sublist li {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.58);
+            padding-left: 1.8em;
+            position: relative;
+        }
+
+        .policy-sublist li::before {
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+            font-weight: 600;
+        }
+
+        .policy-sublist.alpha-ordered {
+            counter-reset: alpha-item;
+        }
+
+        .policy-sublist.alpha-ordered li {
+            counter-increment: alpha-item;
+        }
+
+        .policy-sublist.alpha-ordered li::before {
+            content: counter(alpha-item, lower-alpha) ".";
+        }
+
+        .policy-notice {
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .policy-notice p {
+            font-size: 0.88rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .policy-contact-list {
+            margin: 12px 0;
+            padding-left: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .policy-contact-list li {
+            font-size: 0.93rem;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.65);
+            padding-left: 1.1em;
+            position: relative;
+        }
+
+        .policy-contact-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* GNB */
+        .gnb-policy {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(5, 6, 30, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .gnb-policy-inner {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 5vw;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gnb-policy-logo { height: 28px; width: auto; }
+
+        .gnb-policy-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .gnb-policy-back:hover { color: #fff; }
+        .gnb-policy-back svg { width: 16px; height: 16px; }
+
+        /* 푸터 */
+        .footer-policy {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 40px 5vw;
+        }
+
+        .footer-policy-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-policy-copy {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .footer-policy-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-policy-links a {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-policy-links a:hover,
+        .footer-policy-links a.active { color: #fff; }
+
+        @media (max-width: 768px) {
+            .policy-wrap { padding: 110px 24px 80px; }
+            .policy-intro { padding: 20px 20px; }
+            .footer-policy-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="gnb-policy">
+        <div class="gnb-policy-inner">
+            <a href="index.html">
+                <img src="img/logo.png" alt="SJ World" class="gnb-policy-logo">
+            </a>
+            <a href="index.html" class="gnb-policy-back">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                홈으로 돌아가기
+            </a>
+        </div>
+    </nav>
+
+    <main class="policy-wrap">
+
+        <h1 class="policy-title">개인정보 처리방침</h1>
+        <p class="policy-date">시행일: 2026년 3월 15일</p>
+
+        <p class="policy-intro">
+            SJ World(이하 "서비스")는 이용자의 개인정보를 중요시하며, 「개인정보 보호법」을 준수하고 있습니다.<br>
+            본 방침은 이용자가 제공한 개인정보가 어떠한 용도와 방식으로 이용되고 있는지 알려드립니다.
+        </p>
+
+        <div class="policy-divider"></div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제1조 (개인정보의 처리 목적)</h2>
+            <p class="policy-text">서비스는 다음의 목적을 위해 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않습니다.</p>
+            <ol class="policy-list ordered">
+                <li>SJ NFT 발급 및 관리: 신청자 본인 확인, NFT 생성, 개인 지갑으로의 토큰 전송</li>
+                <li>커뮤니티(DAO) 운영: SJ NFT 소유 확인을 통한 커뮤니티 입장 권한 및 투표권 부여</li>
+                <li>서비스 운영 및 관리: 공지사항 전달, 부정 이용 방지, 민원 처리</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제2조 (수집하는 개인정보의 항목 및 방법)</h2>
+            <p class="policy-text">서비스 제공을 위해 필요한 필수 항목은 다음과 같습니다.</p>
+            <ol class="policy-list ordered">
+                <li>
+                    필수항목
+                    <ol class="policy-sublist alpha-ordered">
+                        <li>SJ NFT 발급자(현행 기준 서정대학교 학생에 한함) — 성명, 국적, 학번, 연락처, 가상자산 지갑 주소(Wallet Address)</li>
+                        <li>일반 발급자 — 국적, 가상자산 지갑 주소(Wallet Address)</li>
+                    </ol>
+                </li>
+                <li>수집방법: 홈페이지 내 신청 양식(구글폼 등)을 통한 이용자의 직접 입력</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제3조 (개인정보의 제3자 제공)</h2>
+            <p class="policy-text">
+                서비스는 정보주체의 개인정보를 제1조(개인정보의 처리 목적)에서 명시한 범위 내에서만 처리하며, 정보주체의 동의, 법률의 특별한 규정 등 「개인정보 보호법」 제17조 및 제18조에 해당하는 경우를 제외하고는 개인정보를 제3자에게 제공하지 않습니다.
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제4조 (개인정보의 보유 및 이용 기간)</h2>
+            <ol class="policy-list ordered">
+                <li>원칙적으로 개인정보 수집 및 이용 목적이 달성된 후(졸업, 제적, 서비스 종료 등)에는 해당 정보를 지체 없이 파기합니다.</li>
+                <li>
+                    단, 다음의 정보는 명시한 사유에 따라 보존됩니다.
+                    <ol class="policy-sublist alpha-ordered">
+                        <li>서비스 이용 기록: 서비스 중단 시까지</li>
+                        <li>블록체인 기록(On-chain Data): 블록체인 네트워크의 특성상 위변조 및 삭제가 불가능하여 영구 보존됨</li>
+                    </ol>
+                </li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제5조 (블록체인 기술 적용에 따른 특례)</h2>
+            <p class="policy-text">
+                본 서비스는 퍼블릭 블록체인 기술을 기반으로 합니다. 이에 따라 이용자가 제출한 '지갑 주소'와 서비스 이용 과정에서 발생하는 '트랜잭션(전송) 기록'은 전 세계의 블록체인 노드에 분산 저장되어 공개됩니다. 이는 기술적으로 삭제나 수정이 불가능하며, 이용자는 서비스 신청 시 이에 동의한 것으로 간주합니다.
+            </p>
+            <div class="policy-notice">
+                <p>단, 이름, 학번 등 개인 식별 정보는 블록체인에 기록되지 않습니다.</p>
+            </div>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제6조 (개인정보의 파기 절차 및 방법)</h2>
+            <p class="policy-text">
+                서버에 저장된 전자적 파일 형태의 정보는 기록을 재생할 수 없는 기술적 방법을 사용하여 삭제합니다. (제5조의 블록체인 기록은 제외)
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제7조 (개인정보의 안전성 확보 조치)</h2>
+            <p class="policy-text">본 서비스는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</p>
+            <ol class="policy-list ordered">
+                <li>관리적 조치: 내부관리계획 수립·시행, 개인정보 취급 직원 최소화 및 교육</li>
+                <li>기술적 조치: 개인정보에 대한 접근 통제, 접속기록 보관, 보안프로그램 설치(백신 등)</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제8조 (정보주체의 권리)</h2>
+            <p class="policy-text">
+                이용자는 언제든지 자신의 개인정보 수집 동의를 철회(신청 취소)할 수 있습니다. 단, 동의 철회 시 SJ NFT 기능이 정지되거나 서비스 이용이 제한될 수 있습니다.
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제9조 (개인정보 보호책임자 및 담당부서)</h2>
+            <p class="policy-text">본 서비스 이용과 관련된 문의는 아래의 연락처로 접수해 주시기 바랍니다.</p>
+            <ul class="policy-contact-list">
+                <li>담당 부서: SJ World 운영팀</li>
+                <li>이메일: [문의 받을 이메일 주소]</li>
+            </ul>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제10조 (권익침해 구제방법)</h2>
+            <p class="policy-text">정보주체는 아래의 기관에 대해 개인정보 침해에 대한 피해구제, 상담 등을 문의하실 수 있습니다.</p>
+            <ul class="policy-contact-list">
+                <li>개인정보침해신고센터 (privacy.kisa.or.kr / 국번없이 118)</li>
+                <li>개인정보분쟁조정위원회 (kopico.go.kr / 1833-6972)</li>
+                <li>대검찰청 사이버수사과 (spo.go.kr / 국번없이 1301)</li>
+                <li>경찰청 사이버수사국 (ecrm.police.go.kr / 국번없이 182)</li>
+            </ul>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제11조 (개인정보 처리방침의 변경)</h2>
+            <p class="policy-text">이 개인정보 처리방침은 2026년 3월 15일부터 적용됩니다.</p>
+        </div>
+
+    </main>
+
+    <footer class="footer-policy">
+        <div class="footer-policy-inner">
+            <p class="footer-policy-copy">©2026 SJWORLD ALL RIGHTS RESERVED.</p>
+            <nav class="footer-policy-links">
+                <a href="terms.html">이용약관</a>
+                <a href="privacy.html" class="active">개인정보 처리방침</a>
+            </nav>
+        </div>
+    </footer>
+
+</body>
+</html>

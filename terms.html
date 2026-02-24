@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이용약관 - SJ World</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
+    <link rel="apple-touch-icon" href="img/favicon.png">
+    <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* styles.css의 hv-scroll 잠금을 정책 페이지에서 해제 */
+        body {
+            background: #05061E;
+            color: #fff;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
+        }
+
+        .policy-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 140px 5vw 100px;
+        }
+
+        .policy-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .policy-date {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 64px;
+        }
+
+        .policy-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.12);
+            margin-bottom: 56px;
+        }
+
+        .policy-section {
+            margin-bottom: 52px;
+        }
+
+        .policy-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .policy-text {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .policy-text + .policy-text {
+            margin-top: 10px;
+        }
+
+        .policy-list {
+            margin: 10px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-list li {
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: rgba(255,255,255,0.7);
+            padding-left: 1.3em;
+            position: relative;
+        }
+
+        .policy-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .policy-list.ordered {
+            counter-reset: item;
+        }
+
+        .policy-list.ordered > li {
+            counter-increment: item;
+            padding-left: 1.6em;
+        }
+
+        .policy-list.ordered > li::before {
+            content: counter(item) ".";
+            font-weight: 600;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .policy-sublist {
+            margin: 6px 0 6px 1.2em;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-sublist li {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.58);
+            padding-left: 1.8em;
+            position: relative;
+        }
+
+        .policy-sublist li::before {
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+            font-weight: 600;
+        }
+
+        .policy-notice {
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .policy-notice p {
+            font-size: 0.88rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* GNB */
+        .gnb-policy {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(5, 6, 30, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .gnb-policy-inner {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 5vw;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gnb-policy-logo { height: 28px; width: auto; }
+
+        .gnb-policy-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .gnb-policy-back:hover { color: #fff; }
+        .gnb-policy-back svg { width: 16px; height: 16px; }
+
+        /* 푸터 */
+        .footer-policy {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 40px 5vw;
+        }
+
+        .footer-policy-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-policy-copy {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .footer-policy-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-policy-links a {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-policy-links a:hover,
+        .footer-policy-links a.active { color: #fff; }
+
+        @media (max-width: 768px) {
+            .policy-wrap { padding: 110px 24px 80px; }
+            .footer-policy-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="gnb-policy">
+        <div class="gnb-policy-inner">
+            <a href="index.html">
+                <img src="img/logo.png" alt="SJ World" class="gnb-policy-logo">
+            </a>
+            <a href="index.html" class="gnb-policy-back">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                홈으로 돌아가기
+            </a>
+        </div>
+    </nav>
+
+    <main class="policy-wrap">
+
+        <h1 class="policy-title">서비스 이용약관</h1>
+        <p class="policy-date">최종 업데이트: 2026년 3월 15일</p>
+
+        <div class="policy-divider"></div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제1조 (목적)</h2>
+            <p class="policy-text">
+                본 약관은 SJ World(이하 "서비스")가 제공하는 SJ NFT 발급 및 블록체인 관련 제반 서비스의 이용과 관련하여, 서비스 제공자와 이용자의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제2조 (용어의 정의)</h2>
+            <ol class="policy-list ordered">
+                <li>"SJ NFT"라 함은 블록체인 기술을 활용하여 SJ World 맴버를 증명하는 대체 불가능한 토큰(Non-Fungible Token)을 말합니다.</li>
+                <li>"이용자"라 함은 본 약관에 따라 서비스를 신청하고 NFT를 발급받은 사람을 말합니다.</li>
+                <li>"개인 지갑(Wallet)"이라 함은 NFT를 보관하고 전송받기 위해 이용자가 생성한 가상자산 지갑을 말합니다.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제3조 (서비스의 내용)</h2>
+            <p class="policy-text">서비스는 다음과 같은 기능을 제공합니다.</p>
+            <ol class="policy-list ordered">
+                <li>SJ NFT 발행(Minting) 및 이용자 지갑으로의 전송</li>
+                <li>블록체인 기반의 SJ World 활동 기록 및 인증</li>
+                <li>커뮤니티(DAO) 참여 권한 및 활동에 따른 보상(리워드) 제공</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제4조 (이용 신청 및 자격)</h2>
+            <ol class="policy-list ordered">
+                <li>이용자는 서비스가 정한 양식(구글폼 등)에 따라 정확한 정보를 기재하여 신청해야 합니다.</li>
+                <li>타인의 정보를 도용하거나 허위 정보를 등록한 경우, 서비스 이용이 제한되며 기 발급된 NFT는 소각(Burn) 또는 무효화될 수 있습니다.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제5조 (NFT의 소유 및 관리)</h2>
+            <ol class="policy-list ordered">
+                <li>
+                    <strong>소유권:</strong> 발급된 SJ NFT의 소유권은 이용자에게 있습니다. 단, NFT에 포함된 이미지, 로고, 디자인에 대한 저작권은 SJ World 운영회사인 '글로벌에듀커넥트'에 있습니다.
+                </li>
+                <li>
+                    <strong>관리 책임:</strong> 이용자는 자신의 개인 지갑 비밀번호(Private Key) 및 복구 구문(Seed Phrase)을 스스로 관리해야 합니다. 이용자의 관리 소홀로 인한 지갑 해킹, NFT 분실 등에 대해 서비스 제공자는 책임을 지지 않습니다.
+                </li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제6조 (서비스 이용의 제한 및 NFT 회수)</h2>
+            <p class="policy-text">서비스는 다음 각 호의 경우 사전 통보 없이 이용자의 권한을 정지하거나 발급된 NFT의 효력을 정지시킬 수 있습니다.</p>
+            <ol class="policy-list ordered">
+                <li>NFT를 타인에게 부정한 방법으로 거래를 시도한 경우</li>
+                <li>서비스의 운영을 고의로 방해하거나 커뮤니티(DAO) 내에서 부적절한 행위를 한 경우</li>
+                <li>대한민국 법에 위반되는 행위 및 사회적 물의를 일으켰을 경우</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제7조 (면책 조항)</h2>
+            <ol class="policy-list ordered">
+                <li>서비스는 블록체인 네트워크 자체의 오류, 트랜잭션 지연, 가스비 변동 등 기술적인 문제로 인해 발생하는 손해에 대해 책임을 지지 않습니다.</li>
+                <li>이용자가 개인 지갑 주소를 잘못 입력하여 NFT가 오발송된 경우, 블록체인 특성상 복구가 불가능하며 서비스는 이에 대해 책임지지 않습니다.</li>
+                <li>본 서비스에서 제공하는 NFT 및 토큰의 금전적 가치는 보증하지 않습니다.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">제8조 (약관의 개정)</h2>
+            <p class="policy-text">
+                서비스는 필요한 경우 관련 법령을 위배하지 않는 범위 내에서 본 약관을 개정할 수 있으며, 개정된 약관은 사이트를 통해 고지합니다.
+            </p>
+        </div>
+
+    </main>
+
+    <footer class="footer-policy">
+        <div class="footer-policy-inner">
+            <p class="footer-policy-copy">©2026 SJWORLD ALL RIGHTS RESERVED.</p>
+            <nav class="footer-policy-links">
+                <a href="terms.html" class="active">이용약관</a>
+                <a href="privacy.html">개인정보 처리방침</a>
+            </nav>
+        </div>
+    </footer>
+
+</body>
+</html>

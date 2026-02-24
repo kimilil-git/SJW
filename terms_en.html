@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - SJ World</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
+    <link rel="apple-touch-icon" href="img/favicon.png">
+    <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* styles.css의 hv-scroll 잠금을 정책 페이지에서 해제 */
+        body {
+            background: #05061E;
+            color: #fff;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
+        }
+
+        .policy-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 140px 5vw 100px;
+        }
+
+        .policy-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .policy-date {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 64px;
+        }
+
+        .policy-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.12);
+            margin-bottom: 56px;
+        }
+
+        .policy-section {
+            margin-bottom: 52px;
+        }
+
+        .policy-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .policy-text {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .policy-text + .policy-text {
+            margin-top: 10px;
+        }
+
+        .policy-list {
+            margin: 10px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-list li {
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: rgba(255,255,255,0.7);
+            padding-left: 1.3em;
+            position: relative;
+        }
+
+        .policy-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .policy-list.ordered {
+            counter-reset: item;
+        }
+
+        .policy-list.ordered > li {
+            counter-increment: item;
+            padding-left: 1.6em;
+        }
+
+        .policy-list.ordered > li::before {
+            content: counter(item) ".";
+            font-weight: 600;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .policy-sublist {
+            margin: 6px 0 6px 1.2em;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-sublist li {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.58);
+            padding-left: 1.8em;
+            position: relative;
+        }
+
+        .policy-sublist li::before {
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+            font-weight: 600;
+        }
+
+        .policy-notice {
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .policy-notice p {
+            font-size: 0.88rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* GNB */
+        .gnb-policy {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(5, 6, 30, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .gnb-policy-inner {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 5vw;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gnb-policy-logo { height: 28px; width: auto; }
+
+        .gnb-policy-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .gnb-policy-back:hover { color: #fff; }
+        .gnb-policy-back svg { width: 16px; height: 16px; }
+
+        /* 푸터 */
+        .footer-policy {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 40px 5vw;
+        }
+
+        .footer-policy-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-policy-copy {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .footer-policy-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-policy-links a {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-policy-links a:hover,
+        .footer-policy-links a.active { color: #fff; }
+
+        @media (max-width: 768px) {
+            .policy-wrap { padding: 110px 24px 80px; }
+            .footer-policy-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="gnb-policy">
+        <div class="gnb-policy-inner">
+            <a href="index_en.html">
+                <img src="img/logo.png" alt="SJ World" class="gnb-policy-logo">
+            </a>
+            <a href="index_en.html" class="gnb-policy-back">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Home
+            </a>
+        </div>
+    </nav>
+
+    <main class="policy-wrap">
+
+        <h1 class="policy-title">Terms of Service</h1>
+        <p class="policy-date">Last Updated: March 15, 2026</p>
+
+        <div class="policy-divider"></div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 1 (Purpose)</h2>
+            <p class="policy-text">
+                These Terms of Service govern the rights, obligations, and responsibilities of the service provider and users in connection with the use of SJ NFT issuance and blockchain-related services provided by SJ World (hereinafter referred to as the "Service").
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 2 (Definitions)</h2>
+            <ol class="policy-list ordered">
+                <li>"SJ NFT" refers to a Non-Fungible Token that utilizes blockchain technology to certify SJ World membership.</li>
+                <li>"User" refers to a person who applies for the Service in accordance with these Terms and receives an NFT.</li>
+                <li>"Personal Wallet" refers to a cryptocurrency wallet created by a user for storing and receiving NFTs.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 3 (Service Description)</h2>
+            <p class="policy-text">The Service provides the following features:</p>
+            <ol class="policy-list ordered">
+                <li>SJ NFT minting and transfer to users' wallets</li>
+                <li>Blockchain-based SJ World activity records and certifications</li>
+                <li>Community (DAO) participation rights and activity-based rewards</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 4 (Application and Eligibility)</h2>
+            <ol class="policy-list ordered">
+                <li>Users must apply by accurately filling in the form designated by the Service (e.g., Google Forms).</li>
+                <li>If a user misuses another person's information or registers false information, their service access may be restricted and previously issued NFTs may be burned or invalidated.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 5 (Ownership and Management of NFTs)</h2>
+            <ol class="policy-list ordered">
+                <li>
+                    <strong>Ownership:</strong> The ownership of issued SJ NFTs belongs to the user. However, the copyright for images, logos, and designs included in the NFT belongs to Global EduConnect, the operating company of SJ World.
+                </li>
+                <li>
+                    <strong>Management Responsibility:</strong> Users are solely responsible for managing their personal wallet's private key and seed phrase. The service provider is not liable for wallet hacking, NFT loss, or other damages resulting from the user's negligence.
+                </li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 6 (Service Restriction and NFT Revocation)</h2>
+            <p class="policy-text">The Service may, without prior notice, suspend a user's access or revoke the validity of an issued NFT in the following cases:</p>
+            <ol class="policy-list ordered">
+                <li>Attempting to trade an NFT to another person through illegitimate means</li>
+                <li>Intentionally disrupting service operations or engaging in inappropriate conduct within the community (DAO)</li>
+                <li>Engaging in actions that violate the laws of the Republic of Korea or cause social issues</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 7 (Disclaimer)</h2>
+            <ol class="policy-list ordered">
+                <li>The Service is not liable for damages arising from technical issues inherent to the blockchain network itself, such as errors, transaction delays, or gas fee fluctuations.</li>
+                <li>If an NFT is sent to an incorrect wallet address entered by the user, recovery is impossible due to the nature of blockchain, and the Service bears no responsibility.</li>
+                <li>The Service does not guarantee the monetary value of the NFTs and tokens provided.</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 8 (Amendment of Terms)</h2>
+            <p class="policy-text">
+                The Service may amend these Terms within the scope that does not violate relevant laws. Any amended Terms will be announced through the website.
+            </p>
+        </div>
+
+    </main>
+
+    <footer class="footer-policy">
+        <div class="footer-policy-inner">
+            <p class="footer-policy-copy">©2026 SJWORLD ALL RIGHTS RESERVED.</p>
+            <nav class="footer-policy-links">
+                <a href="terms_en.html" class="active">TERMS OF SERVICE</a>
+                <a href="privacy_en.html">PRIVACY POLICY</a>
+            </nav>
+        </div>
+    </footer>
+
+</body>
+</html>

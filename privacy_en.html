@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - SJ World</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
+    <link rel="apple-touch-icon" href="img/favicon.png">
+    <link rel="preload" href="font/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="font/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* styles.css의 hv-scroll 잠금을 정책 페이지에서 해제 */
+        body {
+            background: #05061E;
+            color: #fff;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
+        }
+
+        .policy-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 140px 5vw 100px;
+        }
+
+        .policy-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .policy-date {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 64px;
+        }
+
+        .policy-intro {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 64px;
+            padding: 28px 32px;
+            background: rgba(255,255,255,0.04);
+            border-left: 3px solid rgba(255,255,255,0.2);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .policy-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.12);
+            margin-bottom: 56px;
+        }
+
+        .policy-section {
+            margin-bottom: 52px;
+        }
+
+        .policy-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .policy-text {
+            font-size: 0.95rem;
+            line-height: 1.9;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .policy-text + .policy-text {
+            margin-top: 10px;
+        }
+
+        .policy-list {
+            margin: 10px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-list li {
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: rgba(255,255,255,0.7);
+            padding-left: 1.3em;
+            position: relative;
+        }
+
+        .policy-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .policy-list.ordered {
+            counter-reset: item;
+        }
+
+        .policy-list.ordered > li {
+            counter-increment: item;
+            padding-left: 1.6em;
+        }
+
+        .policy-list.ordered > li::before {
+            content: counter(item) ".";
+            font-weight: 600;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .policy-sublist {
+            margin: 6px 0 6px 1.2em;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .policy-sublist li {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.58);
+            padding-left: 1.8em;
+            position: relative;
+        }
+
+        .policy-sublist li::before {
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+            font-weight: 600;
+        }
+
+        .policy-sublist.alpha-ordered {
+            counter-reset: alpha-item;
+        }
+
+        .policy-sublist.alpha-ordered li {
+            counter-increment: alpha-item;
+        }
+
+        .policy-sublist.alpha-ordered li::before {
+            content: counter(alpha-item, lower-alpha) ".";
+        }
+
+        .policy-notice {
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .policy-notice p {
+            font-size: 0.88rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .policy-contact-list {
+            margin: 12px 0;
+            padding-left: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .policy-contact-list li {
+            font-size: 0.93rem;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.65);
+            padding-left: 1.1em;
+            position: relative;
+        }
+
+        .policy-contact-list li::before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* GNB */
+        .gnb-policy {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(5, 6, 30, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .gnb-policy-inner {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 5vw;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gnb-policy-logo { height: 28px; width: auto; }
+
+        .gnb-policy-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .gnb-policy-back:hover { color: #fff; }
+        .gnb-policy-back svg { width: 16px; height: 16px; }
+
+        /* 푸터 */
+        .footer-policy {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 40px 5vw;
+        }
+
+        .footer-policy-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-policy-copy {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .footer-policy-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-policy-links a {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-policy-links a:hover,
+        .footer-policy-links a.active { color: #fff; }
+
+        @media (max-width: 768px) {
+            .policy-wrap { padding: 110px 24px 80px; }
+            .policy-intro { padding: 20px 20px; }
+            .footer-policy-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="gnb-policy">
+        <div class="gnb-policy-inner">
+            <a href="index_en.html">
+                <img src="img/logo.png" alt="SJ World" class="gnb-policy-logo">
+            </a>
+            <a href="index_en.html" class="gnb-policy-back">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Home
+            </a>
+        </div>
+    </nav>
+
+    <main class="policy-wrap">
+
+        <h1 class="policy-title">Privacy Policy</h1>
+        <p class="policy-date">Effective Date: March 15, 2026</p>
+
+        <p class="policy-intro">
+            SJ World (hereinafter referred to as the "Service") values the personal information of its users and complies with the Personal Information Protection Act of the Republic of Korea.<br>
+            This policy describes how the personal information provided by users is used and managed.
+        </p>
+
+        <div class="policy-divider"></div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 1 (Purpose of Processing Personal Information)</h2>
+            <p class="policy-text">The Service processes personal information for the following purposes. Personal information is not used for any purpose other than those listed below.</p>
+            <ol class="policy-list ordered">
+                <li>SJ NFT Issuance and Management: Verification of applicants, NFT creation, and token transfer to personal wallets</li>
+                <li>Community (DAO) Operations: Granting community access rights and voting rights based on SJ NFT ownership verification</li>
+                <li>Service Operations and Management: Delivery of notices, prevention of fraudulent use, and handling of complaints</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 2 (Items and Methods of Personal Information Collection)</h2>
+            <p class="policy-text">The following mandatory items are required to provide the Service.</p>
+            <ol class="policy-list ordered">
+                <li>
+                    Mandatory Items
+                    <ol class="policy-sublist alpha-ordered">
+                        <li>SJ NFT Issuees (currently limited to Seojeong University students) — Full name, nationality, student ID, contact information, cryptocurrency wallet address (Wallet Address)</li>
+                        <li>General Issuees — Nationality, cryptocurrency wallet address (Wallet Address)</li>
+                    </ol>
+                </li>
+                <li>Collection Method: Direct input by the user through an application form on the website (e.g., Google Forms)</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 3 (Provision of Personal Information to Third Parties)</h2>
+            <p class="policy-text">
+                The Service processes personal information only within the scope specified in Article 1 (Purpose of Processing Personal Information) and does not provide personal information to third parties except in cases corresponding to Articles 17 and 18 of the Personal Information Protection Act, such as with the consent of the data subject or due to special provisions of law.
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 4 (Retention and Use Period of Personal Information)</h2>
+            <ol class="policy-list ordered">
+                <li>In principle, personal information is destroyed without delay after the purpose of its collection and use has been achieved (e.g., upon graduation, expulsion, or service termination).</li>
+                <li>
+                    However, the following information is retained for the reasons specified below.
+                    <ol class="policy-sublist alpha-ordered">
+                        <li>Service Usage Records: Until the service is discontinued</li>
+                        <li>Blockchain Records (On-chain Data): Permanently retained, as it is technically impossible to alter or delete due to the nature of blockchain networks</li>
+                    </ol>
+                </li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 5 (Special Provisions for Blockchain Technology)</h2>
+            <p class="policy-text">
+                This Service is based on public blockchain technology. Accordingly, the 'wallet address' submitted by users and 'transaction records' generated during service use are distributed and publicly stored across blockchain nodes worldwide. This is technically impossible to delete or modify, and users are deemed to have consented to this upon applying for the Service.
+            </p>
+            <div class="policy-notice">
+                <p>Note: Personal identifying information such as name and student ID is not recorded on the blockchain.</p>
+            </div>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 6 (Procedures and Methods for Destroying Personal Information)</h2>
+            <p class="policy-text">
+                Information stored in electronic file format on servers is deleted using technical methods that make the records irreproducible. (Blockchain records under Article 5 are excluded.)
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 7 (Measures to Ensure Security of Personal Information)</h2>
+            <p class="policy-text">The Service takes the following measures to ensure the security of personal information.</p>
+            <ol class="policy-list ordered">
+                <li>Administrative Measures: Establishment and implementation of internal management plans, minimization of personnel handling personal information, and training</li>
+                <li>Technical Measures: Access control for personal information, retention of access logs, and installation of security programs (e.g., anti-virus)</li>
+            </ol>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 8 (Rights of Data Subjects)</h2>
+            <p class="policy-text">
+                Users may withdraw their consent to the collection of personal information (cancel their application) at any time. However, withdrawing consent may result in suspension of SJ NFT features or restrictions on service use.
+            </p>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 9 (Privacy Officer and Contact Department)</h2>
+            <p class="policy-text">Please submit any inquiries related to the use of this Service to the contact below.</p>
+            <ul class="policy-contact-list">
+                <li>Department: SJ World Operations Team</li>
+                <li>Email: [Contact email address]</li>
+            </ul>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 10 (Methods for Remedy of Rights Infringement)</h2>
+            <p class="policy-text">Data subjects may contact the following organizations for relief, consultation, etc. regarding personal information infringement.</p>
+            <ul class="policy-contact-list">
+                <li>Personal Information Infringement Report Center (privacy.kisa.or.kr / 118 without area code)</li>
+                <li>Personal Information Dispute Mediation Committee (kopico.go.kr / 1833-6972)</li>
+                <li>Supreme Prosecutors' Office Cybercrime Investigation Division (spo.go.kr / 1301 without area code)</li>
+                <li>National Police Agency Cybercrime Investigation Bureau (ecrm.police.go.kr / 182 without area code)</li>
+            </ul>
+        </div>
+
+        <div class="policy-section">
+            <h2 class="policy-section-title">Article 11 (Changes to the Privacy Policy)</h2>
+            <p class="policy-text">This Privacy Policy is effective from March 15, 2026.</p>
+        </div>
+
+    </main>
+
+    <footer class="footer-policy">
+        <div class="footer-policy-inner">
+            <p class="footer-policy-copy">©2026 SJWORLD ALL RIGHTS RESERVED.</p>
+            <nav class="footer-policy-links">
+                <a href="terms_en.html">TERMS OF SERVICE</a>
+                <a href="privacy_en.html" class="active">PRIVACY POLICY</a>
+            </nav>
+        </div>
+    </footer>
+
+</body>
+</html>
